@@ -1,0 +1,9 @@
+spring:
+  application:
+    name: Backend
+  datasource:
+    url: jdbc:mysql://localhost:3306/store?createDatabaseIfNotExist=true
+    username: root
+    password: pass123
+server:
+  port: 8081
