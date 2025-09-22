@@ -63,4 +63,3 @@ export const testApiConnection = async () => {
 if (typeof window !== 'undefined') {
   (window as any).testApiConnection = testApiConnection;
 }
-
