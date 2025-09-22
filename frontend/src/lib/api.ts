@@ -26,6 +26,7 @@ export interface CartItemDTO {
   productPrice: number;
   quantity: number;
   personalizationDetails?: any;
+  customizationId?: string;
 }
 
 export interface CheckoutRequest {

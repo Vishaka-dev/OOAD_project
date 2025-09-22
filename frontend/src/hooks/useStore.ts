@@ -22,7 +22,7 @@ interface StoreState {
 
   // Cart
   cart: CartItem[];
-  addToCart: (product: Product, quantity?: number) => void;
+  addToCart: (product: Product, quantity?: number, personalizationDetails?: any) => void;
   removeFromCart: (productId: string) => void;
   updateCartQuantity: (productId: string, quantity: number) => void;
   clearCart: () => void;
@@ -178,11 +178,11 @@ export const useStore = create<StoreState>()(
 
       // Cart
       cart: [],
-      addToCart: async (product, quantity = 1) => {
+      addToCart: async (product, quantity = 1, personalizationDetails) => {
         const { currentUser } = get();
         if (currentUser) {
           try {
-            await apiClient.addToCart(parseInt(product.id), quantity);
+            await apiClient.addToCart(parseInt(product.id), quantity, personalizationDetails);
             // Sync with backend after adding
             await get().syncCartWithBackend();
           } catch (error) {
@@ -194,13 +194,13 @@ export const useStore = create<StoreState>()(
                 return {
                   cart: state.cart.map(item =>
                     item.id === product.id
-                      ? { ...item, quantity: item.quantity + quantity }
+                      ? { ...item, quantity: item.quantity + quantity, personalizationDetails }
                       : item
                   )
                 };
               } else {
                 return {
-                  cart: [...state.cart, { ...product, quantity }]
+                  cart: [...state.cart, { ...product, quantity, personalizationDetails }]
                 };
               }
             });
@@ -213,13 +213,13 @@ export const useStore = create<StoreState>()(
               return {
                 cart: state.cart.map(item =>
                   item.id === product.id
-                    ? { ...item, quantity: item.quantity + quantity }
+                    ? { ...item, quantity: item.quantity + quantity, personalizationDetails }
                     : item
                 )
               };
             } else {
               return {
-                cart: [...state.cart, { ...product, quantity }]
+                cart: [...state.cart, { ...product, quantity, personalizationDetails }]
               };
             }
           });
@@ -311,7 +311,8 @@ export const useStore = create<StoreState>()(
             stock: 999,
             rating: 0,
             reviews: 0,
-            backendId: item.id
+            backendId: item.id,
+            personalizationDetails: item.personalizationDetails
           }));
           set({ cart: frontendCart });
         } catch (error) {

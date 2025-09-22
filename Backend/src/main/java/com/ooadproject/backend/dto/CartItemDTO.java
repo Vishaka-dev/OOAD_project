@@ -14,5 +14,6 @@ public class CartItemDTO {
     private String imageUrl;
     private Integer quantity;
     private Map<String, Object> personalizationDetails;
+    private String customizationId;
     private BigDecimal itemTotal;
 }

@@ -55,6 +55,9 @@ public class CartService {
             CartItem item = existingItem.get();
             item.setQuantity(item.getQuantity() + quantity);
             item.setPersonalizationDetails(personalizationDetails);
+            if (personalizationDetails != null && !personalizationDetails.isEmpty()) {
+                item.setCustomizationId(generateCustomizationId(user.getUserId(), productId));
+            }
             return cartItemRepository.save(item);
         } else {
             CartItem newItem = new CartItem();
@@ -62,6 +65,9 @@ public class CartService {
             newItem.setProduct(product);
             newItem.setQuantity(quantity);
             newItem.setPersonalizationDetails(personalizationDetails);
+            if (personalizationDetails != null && !personalizationDetails.isEmpty()) {
+                newItem.setCustomizationId(generateCustomizationId(user.getUserId(), productId));
+            }
             return cartItemRepository.save(newItem);
         }
     }
@@ -125,7 +131,12 @@ public class CartService {
         dto.setImageUrl(item.getProduct().getImageUrl());
         dto.setQuantity(item.getQuantity());
         dto.setPersonalizationDetails(item.getPersonalizationDetails());
+        dto.setCustomizationId(item.getCustomizationId());
         dto.setItemTotal(item.getProduct().getPrice().multiply(BigDecimal.valueOf(item.getQuantity())));
         return dto;
+    }
+
+    private String generateCustomizationId(Integer userId, Integer productId) {
+        return "CUST-" + userId + "-" + productId + "-" + System.currentTimeMillis();
     }
 }

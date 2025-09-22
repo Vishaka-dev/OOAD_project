@@ -1,9 +1,13 @@
-import { Star, ShoppingCart, Heart } from 'lucide-react';
+import { Star, ShoppingCart, Heart, Settings2 } from 'lucide-react';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Product } from '@/types/product';
 import { useStore } from '@/hooks/useStore';
+import { useState } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
 
 interface ProductCardProps {
   product: Product;
@@ -12,14 +16,24 @@ interface ProductCardProps {
 
 export function ProductCard({ product, onViewDetails }: ProductCardProps) {
   const { addToCart } = useStore();
+  const [open, setOpen] = useState(false);
+  const [quantity, setQuantity] = useState(1);
+  const [details, setDetails] = useState<any>({});
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.stopPropagation();
-    addToCart(product);
+    addToCart(product, 1);
   };
 
   const handleViewDetails = () => {
     onViewDetails?.(product);
+  };
+
+  const handlePersonalizedAdd = () => {
+    addToCart(product, quantity, details);
+    setOpen(false);
+    setQuantity(1);
+    setDetails({});
   };
 
   return (
@@ -102,16 +116,158 @@ export function ProductCard({ product, onViewDetails }: ProductCardProps) {
         </div>
       </CardContent>
 
-      <CardFooter className="p-4 pt-0">
+      <CardFooter className="p-4 pt-0 flex gap-2">
         <Button
-          className="w-full"
+          className="flex-1"
           variant={product.stock === 0 ? "outline" : "teddy"}
           disabled={product.stock === 0}
           onClick={handleAddToCart}
         >
           <ShoppingCart className="mr-2 h-4 w-4" />
-          {product.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
+          {product.stock === 0 ? 'Out of Stock' : 'Add as-is'}
         </Button>
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogTrigger asChild>
+            <Button variant="outline" className="flex-1" disabled={product.stock === 0}>
+              <Settings2 className="mr-2 h-4 w-4" /> Personalize
+            </Button>
+          </DialogTrigger>
+          <DialogContent onClick={(e) => e.stopPropagation()}>
+            <DialogHeader>
+              <DialogTitle>Personalize {product.name}</DialogTitle>
+            </DialogHeader>
+            <div className="grid gap-4 py-2">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm">Occasion</label>
+                  <Select onValueChange={(v) => setDetails((d: any) => ({ ...d, occasion: v }))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select occasion" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Graduation">Graduation bouquet</SelectItem>
+                      <SelectItem value="Birthday">Birthday bouquet</SelectItem>
+                      <SelectItem value="Valentine">Valentine bouquet</SelectItem>
+                      <SelectItem value="Mini">Mini bouquet (1 flower)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm">Flowers</label>
+                  <Select onValueChange={(v) => setDetails((d: any) => ({ ...d, flowersCount: v }))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select count" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="7">7 flowers</SelectItem>
+                      <SelectItem value="10">10 flowers</SelectItem>
+                      <SelectItem value="1">1 flower</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm">Flowers color</label>
+                  <Select onValueChange={(v) => setDetails((d: any) => ({ ...d, flowersColor: v }))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select color" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="red">Red</SelectItem>
+                      <SelectItem value="white">White</SelectItem>
+                      <SelectItem value="yellow">Yellow</SelectItem>
+                      <SelectItem value="purple">Purple</SelectItem>
+                      <SelectItem value="pink">Pink</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm">Wrapping Paper</label>
+                  <Select onValueChange={(v) => setDetails((d: any) => ({ ...d, wrappingPaper: v }))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="printed">Printed</SelectItem>
+                      <SelectItem value="plain">Plain (Dyed)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm">Include Teddy</label>
+                  <Select onValueChange={(v) => setDetails((d: any) => ({ ...d, teddy: v }))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="With/Without" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="with">With teddy</SelectItem>
+                      <SelectItem value="without">Without teddy</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm">Teddy Type</label>
+                  <Select onValueChange={(v) => setDetails((d: any) => ({ ...d, teddyType: v }))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="handmade">Handmade Graduation Teddy</SelectItem>
+                      <SelectItem value="fluffy">Fluffy Premium Graduation Teddy</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm">Teddy Color</label>
+                  <Select onValueChange={(v) => setDetails((d: any) => ({ ...d, teddyColor: v }))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select color" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="white">White</SelectItem>
+                      <SelectItem value="cream">Cream</SelectItem>
+                      <SelectItem value="pink">Pink</SelectItem>
+                      <SelectItem value="yellow">Yellow</SelectItem>
+                      <SelectItem value="light yellow">Light Yellow</SelectItem>
+                      <SelectItem value="blue">Blue</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm">Felt Design (Teddy)</label>
+                  <Input placeholder="Describe felt design" onChange={(e) => setDetails((d: any) => ({ ...d, feltDesign: e.target.value }))} />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm">Soft toys</label>
+                  <Select onValueChange={(v) => setDetails((d: any) => ({ ...d, softToys: v }))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select option" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="dolls">Dolls</SelectItem>
+                      <SelectItem value="animal">Animal</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm">Quantity</label>
+                  <Input type="number" min={1} value={quantity} onChange={(e) => setQuantity(parseInt(e.target.value || '1'))} />
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+                <Button onClick={handlePersonalizedAdd}>Add Personalized</Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </CardFooter>
     </Card>
   );

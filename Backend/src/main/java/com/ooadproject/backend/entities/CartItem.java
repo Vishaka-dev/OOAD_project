@@ -36,4 +36,6 @@ public class CartItem {
 
     @JdbcTypeCode(SqlTypes.JSON)
     private Map<String, Object> personalizationDetails;
+
+    private String customizationId;
 }

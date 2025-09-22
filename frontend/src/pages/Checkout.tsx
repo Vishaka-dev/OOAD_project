@@ -173,6 +173,19 @@ const Checkout = () => {
                         <p className="text-xs text-muted-foreground">
                           Qty: {item.quantity}
                         </p>
+                        {item.personalizationDetails && (
+                          <div className="mt-1 text-xs text-muted-foreground">
+                            <span className="font-medium">Personalization:</span>{' '}
+                            <span>
+                              {Object.entries(item.personalizationDetails).map(([k, v], i) => (
+                                <span key={k}>
+                                  {i > 0 && ', '}
+                                  {k}: {String(v)}
+                                </span>
+                              ))}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
                     <div className="text-sm font-semibold">

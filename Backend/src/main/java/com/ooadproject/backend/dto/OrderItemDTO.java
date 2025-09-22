@@ -12,5 +12,6 @@ public class OrderItemDTO {
     private Integer quantity;
     private BigDecimal price;
     private Map<String, Object> personalizationDetails;
+    private String customizationId;
     private BigDecimal itemTotal;
 }

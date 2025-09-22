@@ -61,6 +61,7 @@ public class OrderService {
             orderItem.setQuantity(cartItem.getQuantity());
             orderItem.setPrice(cartItem.getProduct().getPrice());
             orderItem.setPersonalizationDetails(cartItem.getPersonalizationDetails());
+            orderItem.setCustomizationId(cartItem.getCustomizationId());
             orderItemRepository.save(orderItem);
         }
 
@@ -144,6 +145,7 @@ public class OrderService {
         dto.setQuantity(item.getQuantity());
         dto.setPrice(item.getPrice());
         dto.setPersonalizationDetails(item.getPersonalizationDetails());
+        dto.setCustomizationId(item.getCustomizationId());
         dto.setItemTotal(item.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())));
         return dto;
     }
