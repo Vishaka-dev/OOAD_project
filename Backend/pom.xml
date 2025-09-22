@@ -79,6 +79,11 @@
             <scope>annotationProcessor</scope>
         </dependency>
 
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
+
     </dependencies>
     <build>
         <plugins>
@@ -89,7 +94,7 @@
                 <configuration>
                     <url>jdbc:mysql://localhost:3306/gift_pos?createDatabaseIfNotExist=true</url>
                     <user>root</user>
-                    <password>pass123</password>
+                    <password>neo@#%nct127</password>
                 </configuration>
             </plugin>
 
