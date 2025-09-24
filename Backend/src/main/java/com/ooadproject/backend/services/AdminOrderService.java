@@ -1,15 +1,16 @@
+package com.ooadproject.backend.services;
 
-package com.ooadproject.backend.service;
-
-import com.ooadproject.backend.dto.RecentOrderDTO;
-import com.ooadproject.backend.entity.Order;
-import com.ooadproject.backend.entity.Order.OrderStatus;
-import com.ooadproject.backend.repository.OrderRepository;
+import com.ooadproject.backend.dto.OrderResponseDTO;
+import com.ooadproject.backend.entities.Order;
+import com.ooadproject.backend.repositories.OrderRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -24,63 +25,69 @@ public class AdminOrderService {
     @Autowired
     private EmailService emailService;
 
-    public Page<Order> getAllOrders(Pageable pageable) {
-        return orderRepository.findAll(pageable);
+    public Page<OrderResponseDTO> getAllOrders(Pageable pageable) {
+        return orderRepository.findAllByOrderByOrderDateDesc(pageable)
+                .map(this::convertToOrderResponseDTO);
     }
 
-    public List<Order> getOrdersByStatus(OrderStatus status) {
-        return orderRepository.findByStatus(status);
-    }
-
-    public List<RecentOrderDTO> getRecentOrders(int limit) {
-        return orderRepository.findTop10ByOrderByOrderDateDesc().stream()
-                .limit(limit)
-                .map(this::convertToRecentOrderDTO)
+    public List<OrderResponseDTO> getOrdersByStatus(Order.OrderStatus status) {
+        return orderRepository.findByStatus(status).stream()
+                .map(this::convertToOrderResponseDTO)
                 .collect(Collectors.toList());
     }
 
-    public Order updateOrderStatus(Integer orderId, OrderStatus status) {
+    public List<OrderResponseDTO> getRecentOrders(int limit) {
+        Pageable pageable = PageRequest.of(0, limit);
+        return orderRepository.findAllByOrderByOrderDateDesc(pageable)
+                .getContent().stream()
+                .map(this::convertToOrderResponseDTO)
+                .collect(Collectors.toList());
+    }
+
+    public Order updateOrderStatus(Integer orderId, Order.OrderStatus status) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
 
-        OrderStatus previousStatus = order.getStatus();
+        Order.OrderStatus previousStatus = order.getStatus();
         order.setStatus(status);
         Order updated = orderRepository.save(order);
 
         // Send email notification based on status change
-        if (status == OrderStatus.CONFIRMED && previousStatus == OrderStatus.PENDING) {
-            emailService.sendOrderConfirmationEmail(updated);
-        } else if (status == OrderStatus.SHIPPED) {
-            emailService.sendOrderShippedEmail(updated);
-        } else if (status == OrderStatus.DELIVERED) {
-            emailService.sendOrderDeliveredEmail(updated);
+        if (status == Order.OrderStatus.Confirmed && previousStatus != Order.OrderStatus.Confirmed) {
+            emailService.sendOrderConfirmation(updated);
+        } else if (status != previousStatus) {
+            emailService.sendOrderStatusUpdate(updated);
         }
 
         return updated;
     }
 
     public List<Order> getOrdersByDateRange(LocalDateTime startDate, LocalDateTime endDate) {
-        return orderRepository.findByOrderDateBetween(startDate, endDate);
+        return orderRepository.findOrdersBetweenDates(startDate, endDate);
     }
 
     public Long getTotalOrderCount() {
         return orderRepository.count();
     }
 
-    public Long getOrderCountByStatus(OrderStatus status) {
-        return orderRepository.countByStatus(status);
+    public Long getOrderCountByStatus(Order.OrderStatus status) {
+        return (long) orderRepository.findByStatus(status).size();
     }
 
-    private RecentOrderDTO convertToRecentOrderDTO(Order order) {
-        RecentOrderDTO dto = new RecentOrderDTO();
+    private OrderResponseDTO convertToOrderResponseDTO(Order order) {
+        OrderResponseDTO dto = new OrderResponseDTO();
         dto.setOrderId(order.getOrderId());
-        dto.setTotalPrice(order.getTotalPrice());
+        dto.setTotalPrice(BigDecimal.valueOf(order.getTotalPrice()));
         dto.setStatus(order.getStatus());
         dto.setOrderDate(order.getOrderDate());
         dto.setDeliveryAddress(order.getDeliveryAddress());
+        dto.setContactNumber(order.getContactNumber());
+        dto.setDeliveryScheduledDate(order.getDeliveryScheduledDate());
 
-        // Assuming you have user relationship
-        // dto.setCustomerName(order.getUser().getUsername());
+        if (order.getUser() != null) {
+            dto.setCustomerName(order.getUser().getUsername());
+            dto.setCustomerEmail(order.getUser().getEmail());
+        }
 
         return dto;
     }

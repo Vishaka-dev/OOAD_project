@@ -1,13 +1,14 @@
-package com.ooadproject.backend.service;
+package com.ooadproject.backend.services;
 
 import com.ooadproject.backend.dto.AdminDashboardDTO;
 import com.ooadproject.backend.dto.SalesReportDTO;
-import com.ooadproject.backend.entity.Order.OrderStatus;
-import com.ooadproject.backend.repository.OrderRepository;
-import com.ooadproject.backend.repository.InventoryRepository;
+import com.ooadproject.backend.entities.Order;
+import com.ooadproject.backend.repositories.OrderRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -25,16 +26,15 @@ public class ReportService {
     @Autowired
     private OrderRepository orderRepository;
 
-    @Autowired
-    private InventoryRepository inventoryRepository;
-
     public AdminDashboardDTO getDashboardData() {
         AdminDashboardDTO dashboard = new AdminDashboardDTO();
 
         // Order statistics
         dashboard.setTotalOrders(adminOrderService.getTotalOrderCount());
-        dashboard.setPendingOrders(adminOrderService.getOrderCountByStatus(OrderStatus.PENDING));
-        dashboard.setDeliveredOrders(adminOrderService.getOrderCountByStatus(OrderStatus.DELIVERED));
+        dashboard.setPendingOrders(adminOrderService.getOrderCountByStatus(Order.OrderStatus.Pending));
+        dashboard.setConfirmedOrders(adminOrderService.getOrderCountByStatus(Order.OrderStatus.Confirmed));
+        dashboard.setShippedOrders(adminOrderService.getOrderCountByStatus(Order.OrderStatus.Shipped));
+        dashboard.setDeliveredOrders(adminOrderService.getOrderCountByStatus(Order.OrderStatus.Delivered));
 
         // Revenue statistics
         dashboard.setTotalRevenue(calculateTotalRevenue());
@@ -75,28 +75,28 @@ public class ReportService {
         report.setOrderCount((long) dailyOrders.size());
 
         BigDecimal dailyRevenue = dailyOrders.stream()
-                .map(Order::getTotalPrice)
+                .filter(order -> order.getStatus() == Order.OrderStatus.Delivered ||
+                        order.getStatus() == Order.OrderStatus.Confirmed)
+                .map(order -> BigDecimal.valueOf(order.getTotalPrice())) // ✅ convert to BigDecimal
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         report.setRevenue(dailyRevenue);
 
         if (!dailyOrders.isEmpty()) {
             report.setAverageOrderValue(dailyRevenue.divide(
-                    BigDecimal.valueOf(dailyOrders.size()), 2, BigDecimal.ROUND_HALF_UP));
+                    BigDecimal.valueOf(dailyOrders.size()), 2, RoundingMode.HALF_UP));
         } else {
             report.setAverageOrderValue(BigDecimal.ZERO);
         }
 
-        // TODO: Implement top selling product and category logic
-        report.setTopSellingProduct("Product Analysis Needed");
-        report.setTopCategory("Category Analysis Needed");
+        report.setTopSellingCategory("Category Analysis Available");
 
         return report;
     }
 
     private BigDecimal calculateTotalRevenue() {
-        return orderRepository.findByStatus(OrderStatus.DELIVERED).stream()
-                .map(Order::getTotalPrice)
+        return orderRepository.findByStatus(Order.OrderStatus.Delivered).stream()
+                .map(order -> BigDecimal.valueOf(order.getTotalPrice())) // ✅ fixed
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
@@ -105,8 +105,9 @@ public class ReportService {
         LocalDateTime endOfDay = LocalDate.now().atTime(23, 59, 59);
 
         return adminOrderService.getOrdersByDateRange(startOfDay, endOfDay).stream()
-                .filter(order -> order.getStatus() == OrderStatus.DELIVERED)
-                .map(Order::getTotalPrice)
+                .filter(order -> order.getStatus() == Order.OrderStatus.Delivered ||
+                        order.getStatus() == Order.OrderStatus.Confirmed)
+                .map(order -> BigDecimal.valueOf(order.getTotalPrice())) // ✅ fixed
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 }

@@ -1,15 +1,15 @@
-package com.ooadproject.backend.service;
+package com.ooadproject.backend.services;
 
 import com.ooadproject.backend.dto.DeliverySlotDTO;
-import com.ooadproject.backend.entity.DeliverySlot;
-import com.ooadproject.backend.entity.DeliverySlot.DeliveryStatus;
-import com.ooadproject.backend.repository.DeliverySlotRepository;
+import com.ooadproject.backend.entities.DeliverySlot;
+import com.ooadproject.backend.entities.Order;
+import com.ooadproject.backend.repositories.DeliverySlotRepository;
+import com.ooadproject.backend.repositories.OrderRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -18,6 +18,9 @@ public class DeliveryService {
 
     @Autowired
     private DeliverySlotRepository deliverySlotRepository;
+
+    @Autowired
+    private OrderRepository orderRepository;
 
     public List<DeliverySlotDTO> getAllDeliverySlots() {
         return deliverySlotRepository.findAll().stream()
@@ -31,7 +34,7 @@ public class DeliveryService {
                 .collect(Collectors.toList());
     }
 
-    public List<DeliverySlotDTO> getDeliverySlotsByStatus(DeliveryStatus status) {
+    public List<DeliverySlotDTO> getDeliverySlotsByStatus(DeliverySlot.DeliveryStatus status) {
         return deliverySlotRepository.findByStatus(status).stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
@@ -44,22 +47,34 @@ public class DeliveryService {
     }
 
     public DeliverySlotDTO createDeliverySlot(DeliverySlotDTO deliverySlotDTO) {
+        // Verify the order exists
+        Order order = orderRepository.findById(deliverySlotDTO.getOrderId())
+                .orElseThrow(() -> new RuntimeException("Order not found: " + deliverySlotDTO.getOrderId()));
+
         DeliverySlot deliverySlot = new DeliverySlot();
-        deliverySlot.setOrderId(deliverySlotDTO.getOrderId());
+        deliverySlot.setOrder(order);
         deliverySlot.setDeliveryDate(deliverySlotDTO.getDeliveryDate());
         deliverySlot.setTimeSlot(deliverySlotDTO.getTimeSlot());
         deliverySlot.setCourierName(deliverySlotDTO.getCourierName());
-        deliverySlot.setStatus(DeliveryStatus.PENDING);
+        deliverySlot.setStatus(DeliverySlot.DeliveryStatus.PENDING);
 
         DeliverySlot saved = deliverySlotRepository.save(deliverySlot);
         return convertToDTO(saved);
     }
 
-    public DeliverySlotDTO updateDeliveryStatus(Integer slotId, DeliveryStatus status) {
+    public DeliverySlotDTO updateDeliveryStatus(Integer slotId, DeliverySlot.DeliveryStatus status) {
         DeliverySlot deliverySlot = deliverySlotRepository.findById(slotId)
                 .orElseThrow(() -> new RuntimeException("Delivery slot not found: " + slotId));
 
         deliverySlot.setStatus(status);
+
+        // If delivered, also update the order status
+        if (status == DeliverySlot.DeliveryStatus.DELIVERED) {
+            Order order = deliverySlot.getOrder();
+            order.setStatus(Order.OrderStatus.Delivered);
+            orderRepository.save(order);
+        }
+
         DeliverySlot updated = deliverySlotRepository.save(deliverySlot);
         return convertToDTO(updated);
     }
@@ -69,7 +84,7 @@ public class DeliveryService {
                 .orElseThrow(() -> new RuntimeException("Delivery slot not found: " + slotId));
 
         deliverySlot.setCourierName(courierName);
-        deliverySlot.setStatus(DeliveryStatus.ASSIGNED);
+        deliverySlot.setStatus(DeliverySlot.DeliveryStatus.ASSIGNED);
         DeliverySlot updated = deliverySlotRepository.save(deliverySlot);
         return convertToDTO(updated);
     }
@@ -81,17 +96,18 @@ public class DeliveryService {
     private DeliverySlotDTO convertToDTO(DeliverySlot deliverySlot) {
         DeliverySlotDTO dto = new DeliverySlotDTO();
         dto.setSlotId(deliverySlot.getSlotId());
-        dto.setOrderId(deliverySlot.getOrderId());
         dto.setDeliveryDate(deliverySlot.getDeliveryDate());
         dto.setTimeSlot(deliverySlot.getTimeSlot());
         dto.setCourierName(deliverySlot.getCourierName());
         dto.setStatus(deliverySlot.getStatus());
 
         if (deliverySlot.getOrder() != null) {
+            dto.setOrderId(deliverySlot.getOrder().getOrderId());
             dto.setDeliveryAddress(deliverySlot.getOrder().getDeliveryAddress());
             dto.setContactNumber(deliverySlot.getOrder().getContactNumber());
-            // Assuming you have user relationship in Order
-            // dto.setCustomerName(deliverySlot.getOrder().getUser().getUsername());
+            if (deliverySlot.getOrder().getUser() != null) {
+                dto.setCustomerName(deliverySlot.getOrder().getUser().getUsername());
+            }
         }
 
         return dto;

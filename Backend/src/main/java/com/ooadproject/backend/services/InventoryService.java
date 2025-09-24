@@ -1,11 +1,15 @@
-package com.ooadproject.backend.service;
+package com.ooadproject.backend.services;
 
 import com.ooadproject.backend.dto.InventoryDTO;
-import com.ooadproject.backend.entity.Inventory;
-import com.ooadproject.backend.repository.InventoryRepository;
+import com.ooadproject.backend.entities.Inventory;
+import com.ooadproject.backend.entities.Product;
+import com.ooadproject.backend.repositories.InventoryRepository;
+import com.ooadproject.backend.repositories.ProductRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -16,6 +20,9 @@ public class InventoryService {
 
     @Autowired
     private InventoryRepository inventoryRepository;
+
+    @Autowired
+    private ProductRepository productRepository;
 
     public List<InventoryDTO> getAllInventory() {
         return inventoryRepository.findAll().stream()
@@ -45,6 +52,12 @@ public class InventoryService {
                 .orElseThrow(() -> new RuntimeException("Inventory not found for product: " + productId));
 
         inventory.setStockLevel(newStockLevel);
+
+        // Also update the product's stock quantity to keep them in sync
+        Product product = inventory.getProduct();
+        product.setStockQuantity(newStockLevel);
+        productRepository.save(product);
+
         Inventory updated = inventoryRepository.save(inventory);
         return convertToDTO(updated);
     }
@@ -67,6 +80,12 @@ public class InventoryService {
         }
 
         inventory.setStockLevel(inventory.getStockLevel() - quantity);
+
+        // Also update the product's stock quantity
+        Product product = inventory.getProduct();
+        product.setStockQuantity(inventory.getStockLevel());
+        productRepository.save(product);
+
         inventoryRepository.save(inventory);
     }
 
@@ -75,7 +94,26 @@ public class InventoryService {
                 .orElseThrow(() -> new RuntimeException("Inventory not found for product: " + productId));
 
         inventory.setStockLevel(inventory.getStockLevel() + quantity);
+
+        // Also update the product's stock quantity
+        Product product = inventory.getProduct();
+        product.setStockQuantity(inventory.getStockLevel());
+        productRepository.save(product);
+
         inventoryRepository.save(inventory);
+    }
+
+    @Transactional
+    public void createInventoryForProduct(Product product) {
+        // Check if inventory already exists
+        if (!inventoryRepository.existsById(product.getProductId())) {
+            Inventory inventory = new Inventory();
+            inventory.setProductId(product.getProductId());
+            inventory.setProduct(product);
+            inventory.setStockLevel(product.getStockQuantity() != null ? product.getStockQuantity() : 0);
+            inventory.setLowStockThreshold(10); // Default threshold
+            inventoryRepository.save(inventory);
+        }
     }
 
     private InventoryDTO convertToDTO(Inventory inventory) {
@@ -87,10 +125,11 @@ public class InventoryService {
 
         if (inventory.getProduct() != null) {
             dto.setProductName(inventory.getProduct().getName());
-            dto.setPrice(inventory.getProduct().getPrice().doubleValue());
+            dto.setPrice(BigDecimal.valueOf(inventory.getProduct().getPrice()));
             dto.setImageUrl(inventory.getProduct().getImageUrl());
-            // Assuming you have category relationship
-            // dto.setCategoryName(inventory.getProduct().getCategory().getName());
+            if (inventory.getProduct().getCategory() != null) {
+                dto.setCategoryName(inventory.getProduct().getCategory().getName());
+            }
         }
 
         return dto;
