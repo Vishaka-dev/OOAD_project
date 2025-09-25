@@ -32,8 +32,11 @@ public class OrderController {
             @Valid @RequestBody CheckoutRequestDTO request,
             Authentication authentication) {
         try {
-            User user = userService.findByUsername(authentication.getName())
-                    .orElseThrow(() -> new RuntimeException("User not found"));
+            User user = null;
+            if (authentication != null) {
+                user = userService.findByUsername(authentication.getName())
+                        .orElseThrow(() -> new RuntimeException("User not found"));
+            }
 
             Order order = orderService.createOrder(user, request);
             return ResponseEntity.ok("Order created successfully. Order ID: " + order.getOrderId());

@@ -14,7 +14,8 @@ const Checkout = () => {
 
   const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
-  const [shippingAddress, setShippingAddress] = useState("");
+  const [deliveryAddress, setDeliveryAddress] = useState("");
+  const [contactNumber, setContactNumber] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("credit_card");
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
 
@@ -29,7 +30,7 @@ const Checkout = () => {
   const handlePlaceOrder = async () => {
     if (cart.length === 0 || isPlacingOrder) return;
 
-    if (!customerName || !customerEmail || !shippingAddress) {
+    if (!customerName || !customerEmail || !deliveryAddress || !contactNumber) {
       toast({
         title: "Missing Information",
         description: "Please fill in all required fields.",
@@ -43,7 +44,8 @@ const Checkout = () => {
       const result = await checkout(
         customerName,
         customerEmail,
-        shippingAddress,
+        deliveryAddress,
+        contactNumber,
         paymentMethod
       );
 
@@ -123,12 +125,23 @@ const Checkout = () => {
                 </div>
                 <div>
                   <label className="mb-2 block text-sm font-medium">
-                    Shipping Address *
+                    Delivery Address *
                   </label>
                   <Input
                     placeholder="123 Main St, City, State, ZIP"
-                    value={shippingAddress}
-                    onChange={(e) => setShippingAddress(e.target.value)}
+                    value={deliveryAddress}
+                    onChange={(e) => setDeliveryAddress(e.target.value)}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="mb-2 block text-sm font-medium">
+                    Contact Number *
+                  </label>
+                  <Input
+                    placeholder="+1 (555) 123-4567"
+                    value={contactNumber}
+                    onChange={(e) => setContactNumber(e.target.value)}
                     required
                   />
                 </div>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Header } from '@/components/Header';
 import { HeroSection } from '@/components/HeroSection';
 import { ProductGrid } from '@/components/ProductGrid';
@@ -10,9 +10,13 @@ import { Button } from '@/components/ui/button';
 import { Search } from 'lucide-react';
 
 const Index = () => {
-  const { currentUser } = useStore();
+  const { currentUser, loadProducts } = useStore();
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+
+  useEffect(() => {
+    loadProducts();
+  }, [loadProducts]);
 
   //Show different views based on user role
   if (currentUser === 'admin') {

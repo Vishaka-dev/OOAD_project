@@ -43,7 +43,8 @@ export const testApiConnection = async () => {
       const checkoutResult = await apiClient.checkout({
         customerName: 'Test User',
         customerEmail: 'test@example.com',
-        shippingAddress: '123 Test St, Test City, TC 12345',
+        deliveryAddress: '123 Test St, Test City, TC 12345',
+        contactNumber: '+1 (555) 123-4567',
         paymentMethod: 'credit_card'
       });
       console.log('Checkout successful:', checkoutResult);

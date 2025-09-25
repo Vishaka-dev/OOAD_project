@@ -38,4 +38,32 @@ public class CartItem {
     private Map<String, Object> personalizationDetails;
 
     private String customizationId;
+
+    // Denormalized columns for easier SQL reporting (nullable)
+    @Column(name = "occasion")
+    private String occasion;
+
+    @Column(name = "teddy")
+    private String teddy;
+
+    @Column(name = "teddy_type")
+    private String teddyType;
+
+    @Column(name = "teddy_color")
+    private String teddyColor;
+
+    @Column(name = "flowers_count")
+    private Integer flowersCount;
+
+    @Column(name = "flowers_color")
+    private String flowersColor;
+
+    @Column(name = "wrapping_paper")
+    private String wrappingPaper;
+
+    @Column(name = "soft_toys")
+    private String softToys;
+
+    @Column(name = "felt_design")
+    private String feltDesign;
 }

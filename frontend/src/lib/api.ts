@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:8081/api';
+const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || '/api';
 
 // Types for API requests and responses
 export interface AuthRequest {
@@ -20,7 +20,7 @@ export interface AuthResponse {
 }
 
 export interface CartItemDTO {
-  id: number;
+  id?: number; // backend uses itemId; map later
   productId: number;
   productName: string;
   productPrice: number;
@@ -32,8 +32,19 @@ export interface CartItemDTO {
 export interface CheckoutRequest {
   customerName: string;
   customerEmail: string;
-  shippingAddress: string;
+  deliveryAddress: string;
+  contactNumber: string;
   paymentMethod: string;
+  cartItems?: CartItemCheckoutDTO[];
+}
+
+export interface CartItemCheckoutDTO {
+  productId: number;
+  productName: string;
+  productPrice: number;
+  quantity: number;
+  personalizationDetails?: any;
+  customizationId?: string;
 }
 
 export interface OrderResponse {
@@ -44,6 +55,16 @@ export interface OrderResponse {
   status: string;
   orderDate: string;
   items: any[];
+}
+
+export interface PersonalizationOptionDTO {
+  optionId: number;
+  productId: number;
+  usiType?: string;
+  massage?: string;
+  color?: string;
+  extraPrice?: number;
+  maxLength?: number;
 }
 
 class ApiClient {
@@ -60,9 +81,9 @@ class ApiClient {
     options: RequestInit = {}
   ): Promise<T> {
     const url = `${this.baseURL}${endpoint}`;
-    const headers: HeadersInit = {
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      ...options.headers,
+      ...(options.headers as Record<string, string> | undefined),
     };
 
     if (this.token) {
@@ -149,6 +170,22 @@ class ApiClient {
     });
   }
 
+  async addPersonalizedToCart(payload: {
+    productId: number;
+    quantity: number;
+    usiType?: string;
+    massage?: string;
+    color?: string;
+    extraPrice?: number;
+    maxLength?: number;
+    additionalDetails?: any;
+  }): Promise<CartItemDTO> {
+    return this.request<CartItemDTO>('/personalization/add-to-cart', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
   async updateCartItem(itemId: number, quantity: number): Promise<void> {
     const params = new URLSearchParams({
       quantity: quantity.toString(),
@@ -185,6 +222,16 @@ class ApiClient {
 
   async getOrder(orderId: number): Promise<OrderResponse> {
     return this.request<OrderResponse>(`/orders/${orderId}`);
+  }
+
+  // Personalization methods
+  async getPersonalizationOptions(productId: number): Promise<PersonalizationOptionDTO[]> {
+    return this.request<PersonalizationOptionDTO[]>(`/personalization/products/${productId}/options`);
+  }
+
+  // Product methods
+  async getProducts(): Promise<any[]> {
+    return this.request<any[]>(`/products`);
   }
 }
 

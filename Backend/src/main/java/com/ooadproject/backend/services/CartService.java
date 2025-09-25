@@ -57,6 +57,7 @@ public class CartService {
             item.setPersonalizationDetails(personalizationDetails);
             if (personalizationDetails != null && !personalizationDetails.isEmpty()) {
                 item.setCustomizationId(generateCustomizationId(user.getUserId(), productId));
+                copyDenormalizedPersonalization(item, personalizationDetails);
             }
             return cartItemRepository.save(item);
         } else {
@@ -67,6 +68,7 @@ public class CartService {
             newItem.setPersonalizationDetails(personalizationDetails);
             if (personalizationDetails != null && !personalizationDetails.isEmpty()) {
                 newItem.setCustomizationId(generateCustomizationId(user.getUserId(), productId));
+                copyDenormalizedPersonalization(newItem, personalizationDetails);
             }
             return cartItemRepository.save(newItem);
         }
@@ -138,5 +140,58 @@ public class CartService {
 
     private String generateCustomizationId(Integer userId, Integer productId) {
         return "CUST-" + userId + "-" + productId + "-" + System.currentTimeMillis();
+    }
+
+    private void copyDenormalizedPersonalization(CartItem item, Map<String, Object> details) {
+        // Safely copy common fields if present. Keys must match frontend payload.
+        putString(details, "occasion").ifPresent(v -> setField(item, "occasion", v));
+        putString(details, "teddy").ifPresent(v -> setField(item, "teddy", v));
+        putString(details, "teddyType").ifPresent(v -> setField(item, "teddy_type", v));
+        putString(details, "teddyColor").ifPresent(v -> setField(item, "teddy_color", v));
+        putString(details, "flowersColor").ifPresent(v -> setField(item, "flowers_color", v));
+        putString(details, "wrappingPaper").ifPresent(v -> setField(item, "wrapping_paper", v));
+        putString(details, "softToys").ifPresent(v -> setField(item, "soft_toys", v));
+        putString(details, "feltDesign").ifPresent(v -> setField(item, "felt_design", v));
+
+        // flowersCount might be numeric or string
+        Object count = details.get("flowersCount");
+        if (count != null) {
+            Integer intCount = null;
+            if (count instanceof Number) intCount = ((Number) count).intValue();
+            else {
+                try { intCount = Integer.parseInt(String.valueOf(count)); } catch (Exception ignored) {}
+            }
+            if (intCount != null) setField(item, "flowers_count", intCount);
+        }
+    }
+
+    private java.util.Optional<String> putString(Map<String, Object> m, String key) {
+        Object v = m.get(key);
+        if (v == null) return java.util.Optional.empty();
+        String s = String.valueOf(v);
+        if (s.isBlank()) return java.util.Optional.empty();
+        return java.util.Optional.of(s);
+    }
+
+    private void setField(CartItem item, String columnLikeName, Object value) {
+        // Use JPA entity setters if you add fields to CartItem entity; for now, execute a lightweight update via repository if needed.
+        // Simpler approach: rely on JPA @DynamicUpdate if added fields exist on entity.
+        try {
+            java.lang.reflect.Field f;
+            switch (columnLikeName) {
+                case "occasion": f = CartItem.class.getDeclaredField("occasion"); break;
+                case "teddy": f = CartItem.class.getDeclaredField("teddy"); break;
+                case "teddy_type": f = CartItem.class.getDeclaredField("teddyType"); break;
+                case "teddy_color": f = CartItem.class.getDeclaredField("teddyColor"); break;
+                case "flowers_count": f = CartItem.class.getDeclaredField("flowersCount"); break;
+                case "flowers_color": f = CartItem.class.getDeclaredField("flowersColor"); break;
+                case "wrapping_paper": f = CartItem.class.getDeclaredField("wrappingPaper"); break;
+                case "soft_toys": f = CartItem.class.getDeclaredField("softToys"); break;
+                case "felt_design": f = CartItem.class.getDeclaredField("feltDesign"); break;
+                default: return;
+            }
+            f.setAccessible(true);
+            f.set(item, value);
+        } catch (Exception ignored) {}
     }
 }

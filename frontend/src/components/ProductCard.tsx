@@ -4,10 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Product } from '@/types/product';
 import { useStore } from '@/hooks/useStore';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
+import { apiClient, PersonalizationOptionDTO } from '@/lib/api';
 
 interface ProductCardProps {
   product: Product;
@@ -19,6 +20,8 @@ export function ProductCard({ product, onViewDetails }: ProductCardProps) {
   const [open, setOpen] = useState(false);
   const [quantity, setQuantity] = useState(1);
   const [details, setDetails] = useState<any>({});
+  const [options, setOptions] = useState<PersonalizationOptionDTO[] | null>(null);
+  const [loadingOptions, setLoadingOptions] = useState(false);
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -34,6 +37,35 @@ export function ProductCard({ product, onViewDetails }: ProductCardProps) {
     setOpen(false);
     setQuantity(1);
     setDetails({});
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    (async () => {
+      try {
+        setLoadingOptions(true);
+        const res = await apiClient.getPersonalizationOptions(parseInt(product.id));
+        setOptions(res);
+      } catch (e) {
+        setOptions([]);
+      } finally {
+        setLoadingOptions(false);
+      }
+    })();
+  }, [open, product.id]);
+
+  const handleOpenPersonalize = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setOpen(true);
+    try {
+      setLoadingOptions(true);
+      const res = await apiClient.getPersonalizationOptions(parseInt(product.id));
+      setOptions(res);
+    } catch (e) {
+      setOptions([]);
+    } finally {
+      setLoadingOptions(false);
+    }
   };
 
   return (
@@ -128,15 +160,21 @@ export function ProductCard({ product, onViewDetails }: ProductCardProps) {
         </Button>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button variant="outline" className="flex-1" disabled={product.stock === 0}>
+            <Button variant="outline" className="flex-1" disabled={product.stock === 0} onClick={handleOpenPersonalize}>
               <Settings2 className="mr-2 h-4 w-4" /> Personalize
             </Button>
           </DialogTrigger>
-          <DialogContent onClick={(e) => e.stopPropagation()}>
+          <DialogContent aria-describedby={undefined} onClick={(e) => e.stopPropagation()}>
             <DialogHeader>
               <DialogTitle>Personalize {product.name}</DialogTitle>
             </DialogHeader>
             <div className="grid gap-4 py-2">
+              {/* Example: fetched options preview (optional) */}
+              {loadingOptions ? (
+                <div className="text-sm text-muted-foreground">Loading personalization options…</div>
+              ) : options && options.length > 0 ? (
+                <div className="text-xs text-muted-foreground">Available options: {options.map(o => o.usiType || o.color || o.massage).filter(Boolean).join(', ')}</div>
+              ) : null}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm">Occasion</label>

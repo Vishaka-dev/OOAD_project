@@ -16,6 +16,7 @@ interface StoreState {
   // Products
   products: Product[];
   setProducts: (products: Product[]) => void;
+  loadProducts: () => Promise<void>;
   addProduct: (product: Product) => void;
   updateProduct: (id: string, updates: Partial<Product>) => void;
   deleteProduct: (id: string) => void;
@@ -33,7 +34,7 @@ interface StoreState {
   orders: Order[];
   addOrder: (order: Order) => void;
   updateOrderStatus: (orderId: string, status: Order['status']) => void;
-  checkout: (customerName: string, customerEmail: string, shippingAddress: string, paymentMethod: string) => Promise<string>;
+  checkout: (customerName: string, customerEmail: string, deliveryAddress: string, contactNumber: string, paymentMethod: string) => Promise<string>;
 
   // POS
   posCart: CartItem[];
@@ -147,7 +148,7 @@ export const useStore = create<StoreState>()(
       },
       register: async (name: string, email: string, password: string) => {
         try {
-          const response = await apiClient.register({ name, email, password });
+          const response = await apiClient.register({ username: name, email, password });
           const userRole = response.role.toLowerCase() as 'customer' | 'admin' | 'cashier';
           set({ 
             currentUser: userRole, 
@@ -164,8 +165,34 @@ export const useStore = create<StoreState>()(
       },
 
       // Products
-      products: mockProducts,
+      products: [],
       setProducts: (products) => set({ products }),
+      loadProducts: async () => {
+        try {
+          const backendProducts = await apiClient.getProducts();
+          if (!backendProducts || backendProducts.length === 0) {
+            set({ products: mockProducts });
+            return;
+          }
+          const mapped: Product[] = backendProducts.map((p: any) => ({
+            id: String(p.productId),
+            name: p.name,
+            description: p.description || '',
+            price: Number(p.price || 0),
+            image: p.imageUrl || '/placeholder.svg',
+            category: p.categoryName || 'Unknown',
+            size: 'Medium',
+            stock: Number(p.stockQuantity ?? 0),
+            featured: false,
+            rating: 0,
+            reviews: 0,
+          }));
+          set({ products: mapped });
+        } catch (e) {
+          console.error('Failed to load products from backend, falling back to mock.', e);
+          set({ products: mockProducts });
+        }
+      },
       addProduct: (product) => set((state) => ({ 
         products: [...state.products, product] 
       })),
@@ -182,7 +209,22 @@ export const useStore = create<StoreState>()(
         const { currentUser } = get();
         if (currentUser) {
           try {
-            await apiClient.addToCart(parseInt(product.id), quantity, personalizationDetails);
+            if (personalizationDetails && Object.keys(personalizationDetails).length > 0) {
+              // Map a few common fields if present; others go in additionalDetails
+              const { usiType, massage, color, extraPrice, maxLength, ...rest } = personalizationDetails || {};
+              await apiClient.addPersonalizedToCart({
+                productId: parseInt(product.id),
+                quantity,
+                usiType,
+                massage,
+                color,
+                extraPrice,
+                maxLength,
+                additionalDetails: rest,
+              });
+            } else {
+              await apiClient.addToCart(parseInt(product.id), quantity);
+            }
             // Sync with backend after adding
             await get().syncCartWithBackend();
           } catch (error) {
@@ -300,18 +342,19 @@ export const useStore = create<StoreState>()(
         try {
           const backendCart = await apiClient.getCartItems();
           // Convert backend cart items to frontend format
-          const frontendCart: CartItem[] = backendCart.map(item => ({
+          const frontendCart: CartItem[] = backendCart.map((item: any) => ({
             id: item.productId.toString(),
             name: item.productName,
-            price: item.productPrice,
+            description: item.productDescription || '',
+            price: Number(item.productPrice),
             quantity: item.quantity,
-            image: '/placeholder.svg', // You might want to fetch this from products
+            image: item.imageUrl || '/placeholder.svg',
             category: 'Unknown',
             size: 'Medium',
             stock: 999,
             rating: 0,
             reviews: 0,
-            backendId: item.id,
+            backendId: item.itemId || item.id,
             personalizationDetails: item.personalizationDetails
           }));
           set({ cart: frontendCart });
@@ -330,13 +373,27 @@ export const useStore = create<StoreState>()(
           order.id === orderId ? { ...order, status } : order
         )
       })),
-      checkout: async (customerName: string, customerEmail: string, shippingAddress: string, paymentMethod: string) => {
+      checkout: async (customerName: string, customerEmail: string, deliveryAddress: string, contactNumber: string, paymentMethod: string) => {
         try {
+          const { currentUser, cart } = get();
+          
+          // For guest users, send cart items in the request
+          const cartItems = currentUser ? undefined : cart.map(item => ({
+            productId: parseInt(item.id),
+            productName: item.name,
+            productPrice: item.price,
+            quantity: item.quantity,
+            personalizationDetails: item.personalizationDetails,
+            customizationId: item.customizationId
+          }));
+
           const result = await apiClient.checkout({
             customerName,
             customerEmail,
-            shippingAddress,
-            paymentMethod
+            deliveryAddress,
+            contactNumber,
+            paymentMethod,
+            cartItems
           });
           // Clear cart after successful checkout
           await get().clearCart();
