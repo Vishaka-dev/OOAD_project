@@ -25,7 +25,6 @@ public class OrderService {
     private final PaymentRepository paymentRepository;
     private final CartService cartService;
     private final PaymentService paymentService;
-    private final EmailService emailService;
 
     @Transactional
     public Order createOrder(User user, CheckoutRequestDTO request) {
@@ -69,9 +68,6 @@ public class OrderService {
             order.setStatus(Order.OrderStatus.Confirmed);
             orderRepository.save(order);
 
-            // Send confirmation email
-            emailService.sendOrderConfirmation(order);
-
             // Clear cart
             cartService.clearCart(user);
         }
@@ -107,9 +103,6 @@ public class OrderService {
 
         order.setStatus(status);
         order = orderRepository.save(order);
-
-        // Send status update email
-        emailService.sendOrderStatusUpdate(order);
 
         return order;
     }

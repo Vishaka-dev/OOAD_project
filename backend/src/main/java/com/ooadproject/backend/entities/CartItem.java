@@ -3,9 +3,6 @@ package com.ooadproject.backend.entities;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -13,9 +10,6 @@ import java.util.Map;
 
 @Entity
 @Table(name = "cart_items")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
 public class CartItem {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -36,4 +30,58 @@ public class CartItem {
 
     @JdbcTypeCode(SqlTypes.JSON)
     private Map<String, Object> personalizationDetails;
+
+    // Constructors
+    public CartItem() {
+    }
+
+    public CartItem(Integer itemId, Cart cart, Product product, Integer quantity,
+                    Map<String, Object> personalizationDetails) {
+        this.itemId = itemId;
+        this.cart = cart;
+        this.product = product;
+        this.quantity = quantity;
+        this.personalizationDetails = personalizationDetails;
+    }
+
+    // Getters & Setters
+    public Integer getItemId() {
+        return itemId;
+    }
+
+    public void setItemId(Integer itemId) {
+        this.itemId = itemId;
+    }
+
+    public Cart getCart() {
+        return cart;
+    }
+
+    public void setCart(Cart cart) {
+        this.cart = cart;
+    }
+
+    public Product getProduct() {
+        return product;
+    }
+
+    public void setProduct(Product product) {
+        this.product = product;
+    }
+
+    public Integer getQuantity() {
+        return quantity;
+    }
+
+    public void setQuantity(Integer quantity) {
+        this.quantity = quantity;
+    }
+
+    public Map<String, Object> getPersonalizationDetails() {
+        return personalizationDetails;
+    }
+
+    public void setPersonalizationDetails(Map<String, Object> personalizationDetails) {
+        this.personalizationDetails = personalizationDetails;
+    }
 }

@@ -1,14 +1,10 @@
 package com.ooadproject.backend.entities;
 
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
-import lombok.Data;
 import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 
-@Data
 @Entity
 @Table(name = "inventory")
 public class Inventory {
@@ -29,4 +25,51 @@ public class Inventory {
     @ColumnDefault("10")
     @Column(name = "low_stock_threshold")
     private Integer lowStockThreshold;
+
+    // ---------- Constructors ----------
+    public Inventory() {
+    }
+
+    public Inventory(Integer productId,
+                     Product product,
+                     Integer stockLevel,
+                     Integer lowStockThreshold) {
+        this.productId = productId;
+        this.product = product;
+        this.stockLevel = stockLevel;
+        this.lowStockThreshold = lowStockThreshold;
+    }
+
+    // ---------- Getters & Setters ----------
+    public Integer getProductId() {
+        return productId;
+    }
+
+    public void setProductId(Integer productId) {
+        this.productId = productId;
+    }
+
+    public Product getProduct() {
+        return product;
+    }
+
+    public void setProduct(Product product) {
+        this.product = product;
+    }
+
+    public Integer getStockLevel() {
+        return stockLevel;
+    }
+
+    public void setStockLevel(Integer stockLevel) {
+        this.stockLevel = stockLevel;
+    }
+
+    public Integer getLowStockThreshold() {
+        return lowStockThreshold;
+    }
+
+    public void setLowStockThreshold(Integer lowStockThreshold) {
+        this.lowStockThreshold = lowStockThreshold;
+    }
 }

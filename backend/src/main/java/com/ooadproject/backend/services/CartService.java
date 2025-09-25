@@ -28,7 +28,7 @@ public class CartService {
     @Transactional
     public Cart getOrCreateCart(User user) {
         if (user == null) {
-            // For unauthenticated users, create a temporary cart
+            // For unauthenticated users (create a temporary cart)
             Cart cart = new Cart();
             cart.setUser(null); // Allow null user for temporary carts
             return cartRepository.save(cart);
@@ -42,10 +42,8 @@ public class CartService {
     }
 
     @Transactional
-    public CartItem addToCart(User user, Integer productId, Integer quantity,
-                              Map<String, Object> personalizationDetails) {
-        if (user == null) {
-            // For unauthenticated users, use a default session ID
+    public CartItem addToCart(User user, Integer productId, Integer quantity, Map<String, Object> personalizationDetails) {
+        if (user == null) {// For unauthenticated users (use a default session ID)
             String sessionId = "anonymous";
             return addToSessionCart(sessionId, productId, quantity, personalizationDetails);
         }
