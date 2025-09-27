@@ -1,17 +1,21 @@
-import { Star, ShoppingCart, Heart } from 'lucide-react';
-import { Card, CardContent, CardFooter } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Product } from '@/types/product';
-import { useStore } from '@/hooks/useStore';
+import { Star, ShoppingCart, Heart } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { UIProduct } from "@/types/product";
+import { useStore } from "@/hooks/useStore";
 
 interface ProductCardProps {
-  product: Product;
-  onViewDetails?: (product: Product) => void;
+  product: UIProduct;
+  onViewDetails?: (product: UIProduct) => void;
 }
 
 export function ProductCard({ product, onViewDetails }: ProductCardProps) {
   const { addToCart } = useStore();
+  const navigate = useNavigate();
+
+  console.log("🔄 ProductCard rendered for product:", product);
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -19,7 +23,11 @@ export function ProductCard({ product, onViewDetails }: ProductCardProps) {
   };
 
   const handleViewDetails = () => {
-    onViewDetails?.(product);
+    if (onViewDetails) {
+      onViewDetails(product);
+    } else {
+      navigate(`/product/${product.id}`);
+    }
   };
 
   return (
@@ -63,15 +71,15 @@ export function ProductCard({ product, onViewDetails }: ProductCardProps) {
           <p className="text-sm text-muted-foreground line-clamp-2">
             {product.description}
           </p>
-          
+
           <div className="flex items-center space-x-1">
             {[...Array(5)].map((_, i) => (
               <Star
                 key={i}
                 className={`h-3 w-3 ${
                   i < Math.floor(product.rating)
-                    ? 'fill-yellow-400 text-yellow-400'
-                    : 'fill-muted text-muted'
+                    ? "fill-yellow-400 text-yellow-400"
+                    : "fill-muted text-muted"
                 }`}
               />
             ))}
@@ -110,7 +118,7 @@ export function ProductCard({ product, onViewDetails }: ProductCardProps) {
           onClick={handleAddToCart}
         >
           <ShoppingCart className="mr-2 h-4 w-4" />
-          {product.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
+          {product.stock === 0 ? "Out of Stock" : "Add to Cart"}
         </Button>
       </CardFooter>
     </Card>

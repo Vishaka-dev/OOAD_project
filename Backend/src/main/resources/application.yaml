@@ -7,7 +7,7 @@ spring:
   datasource:
     url: jdbc:mysql://localhost:3306/gift_pos?createDatabaseIfNotExist=true
     username: root
-    password: pass123
+    password: 12126441sawandeez
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   mail:

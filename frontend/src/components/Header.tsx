@@ -1,4 +1,5 @@
 import { ShoppingCart, User, Heart, Search, Menu } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useStore } from "@/hooks/useStore";
 import { Badge } from "@/components/ui/badge";
@@ -35,18 +36,18 @@ export function Header({ onCartClick, onSearchClick }: HeaderProps) {
 
         {/* Navigation */}
         <nav className="hidden md:flex items-center space-x-6">
-          <a
-            href="#home"
+          <Link
+            to="/"
             className="text-sm font-medium transition-colors hover:text-primary"
           >
             Home
-          </a>
-          <a
-            href="#products"
+          </Link>
+          <Link
+            to="/products"
             className="text-sm font-medium transition-colors hover:text-primary"
           >
             Products
-          </a>
+          </Link>
           <a
             href="#categories"
             className="text-sm font-medium transition-colors hover:text-primary"

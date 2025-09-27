@@ -3,6 +3,7 @@ package com.ooadproject.backend.services;
 import com.ooadproject.backend.dto.CartItemDTO;
 import com.ooadproject.backend.entities.Cart;
 import com.ooadproject.backend.entities.CartItem;
+import com.ooadproject.backend.entities.Product;
 import com.ooadproject.backend.entities.User;
 import com.ooadproject.backend.repositories.CartItemRepository;
 import com.ooadproject.backend.repositories.CartRepository;
