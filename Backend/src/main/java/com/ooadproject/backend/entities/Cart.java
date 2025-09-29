@@ -1,29 +1,26 @@
 package com.ooadproject.backend.entities;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
 import lombok.Data;
-import org.hibernate.annotations.OnDelete;
-import org.hibernate.annotations.OnDeleteAction;
+import lombok.NoArgsConstructor;
 
-import java.util.LinkedHashSet;
-import java.util.Set;
+import java.util.List;
 
-@Data
 @Entity
 @Table(name = "carts")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class Cart {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "cart_id", nullable = false)
     private Integer cartId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @OnDelete(action = OnDeleteAction.CASCADE)
+    @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     private User user;
 
-    @JsonIgnore
-    @OneToMany(mappedBy = "cart", fetch = FetchType.LAZY)
-    private Set<CartItem> cartItems = new LinkedHashSet<>();
+    @OneToMany(mappedBy = "cart", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<CartItem> cartItems;
 }

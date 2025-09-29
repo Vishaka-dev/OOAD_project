@@ -1,63 +1,61 @@
 package com.ooadproject.backend.entities;
 
-import lombok.Data;
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.persistence.*;
-import org.hibernate.annotations.ColumnDefault;
-import org.hibernate.annotations.OnDelete;
-import org.hibernate.annotations.OnDeleteAction;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.LinkedHashSet;
-import java.util.Set;
 import java.time.LocalDateTime;
+import java.util.List;
 
-@Data
 @Entity
 @Table(name = "orders")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class Order {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "order_id", nullable = false)
     private Integer orderId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @OnDelete(action = OnDeleteAction.CASCADE)
     @JoinColumn(name = "user_id")
     private User user;
 
-    @ColumnDefault("CURRENT_TIMESTAMP")
-    @Column(name = "order_date")
-    private LocalDateTime orderDate = LocalDateTime.now();
+    @CreationTimestamp
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime orderDate;
 
     @Enumerated(EnumType.STRING)
-    @ColumnDefault("'Pending'")
-    @Column(name = "status", nullable = false)
-    private OrderStatus status;
+    private OrderStatus status = OrderStatus.Pending;
 
-    @Column(name = "total_price", nullable = false)
-    private Double totalPrice;
+    @Column(nullable = false, precision = 10, scale = 2)
+    @NotNull(message = "Total price is required")
+    @DecimalMin(value = "0.00", message = "Total price must be positive")
+    private BigDecimal totalPrice;
 
-    @Column(name = "delivery_scheduled_date")
     private LocalDate deliveryScheduledDate;
 
-    @Column(name = "delivery_address", nullable = false, length = 255)
+    @Column(nullable = false)
+    @NotBlank(message = "Delivery address is required")
     private String deliveryAddress;
 
-    @Column(name = "contact_number", nullable = false, length = 20)
+    @Column(nullable = false, length = 20)
+    @NotBlank(message = "Contact number is required")
     private String contactNumber;
 
-    @JsonIgnore
-    @OneToMany(mappedBy = "order", fetch = FetchType.LAZY)
-    private Set<DeliverySlot> deliverySlots = new LinkedHashSet<>();
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<OrderItem> orderItems;
 
-    @JsonIgnore
-    @OneToMany(mappedBy = "order", fetch = FetchType.LAZY)
-    private Set<OrderItem> orderItems = new LinkedHashSet<>();
-
-    @JsonIgnore
-    @OneToMany(mappedBy = "order", fetch = FetchType.LAZY)
-    private Set<Payment> payments = new LinkedHashSet<>();
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<Payment> payments;
 
     public enum OrderStatus {
         Pending, Confirmed, Shipped, Delivered, Cancelled

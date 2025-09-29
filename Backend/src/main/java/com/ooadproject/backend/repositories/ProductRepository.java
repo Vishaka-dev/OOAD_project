@@ -1,7 +1,7 @@
 package com.ooadproject.backend.repositories;
 
-import com.ooadproject.backend.entities.Product;
 import com.ooadproject.backend.entities.Category;
+import com.ooadproject.backend.entities.Product;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;

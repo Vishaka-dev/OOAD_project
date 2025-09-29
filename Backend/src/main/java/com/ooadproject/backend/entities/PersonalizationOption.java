@@ -32,8 +32,8 @@ public class PersonalizationOption {
     private Color color;
 
     @ColumnDefault("0.00")
-    @Column(name = "extra_price")
-    private Double extraPrice;
+    @Column(name = "extra_price", precision = 10, scale = 2)
+    private java.math.BigDecimal extraPrice;
 
     @ColumnDefault("20")
     @Column(name = "max_length")

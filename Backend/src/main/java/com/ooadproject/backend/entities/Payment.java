@@ -1,51 +1,52 @@
 package com.ooadproject.backend.entities;
 
 import jakarta.persistence.*;
-import org.hibernate.annotations.ColumnDefault;
-import org.hibernate.annotations.OnDelete;
-import org.hibernate.annotations.OnDeleteAction;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-@Data
 @Entity
 @Table(name = "payments")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class Payment {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "payment_id", nullable = false)
     private Integer paymentId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @OnDelete(action = OnDeleteAction.CASCADE)
     @JoinColumn(name = "order_id")
     private Order order;
 
-    @Column(name = "amount", nullable = false)
-    private Double amount;
+    @Column(nullable = false, precision = 10, scale = 2)
+    @NotNull(message = "Amount is required")
+    @DecimalMin(value = "0.00", message = "Amount must be positive")
+    private BigDecimal amount;
 
     @Enumerated(EnumType.STRING)
-    @ColumnDefault("'Pending'")
-    @Column(name = "status", nullable = false)
-    private Status status;
+    private PaymentStatus status = PaymentStatus.Pending;
 
-    @Column(name = "transaction_id", length = 100)
     private String transactionId;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "payment_method", nullable = false)
+    @Column(nullable = false)
     private PaymentMethod paymentMethod;
 
-    @ColumnDefault("CURRENT_TIMESTAMP")
-    @Column(name = "created_at")
-    private LocalDateTime createdAt = LocalDateTime.now();
+    @CreationTimestamp
+    private LocalDateTime createdAt;
 
-    public enum Status {
+    public enum PaymentStatus {
         Pending, Completed, Failed
     }
 
     public enum PaymentMethod {
-        credit_card, paypal, cod
+        credit_card, payhear, cod
     }
 }

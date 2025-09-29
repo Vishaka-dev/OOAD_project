@@ -1,0 +1,16 @@
+{
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^5.1.0"
+  },
+  "name": "backend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "type" : "module",
+  "scripts": {
+    "start": " node index.js"
+  },
+  "author": "",
+  "license": "ISC"
+}

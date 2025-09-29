@@ -2,43 +2,41 @@ package com.ooadproject.backend.entities;
 
 import jakarta.persistence.*;
 import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
+import org.hibernate.annotations.ColumnDefault;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
+
 import java.time.LocalDate;
 
+@Data
 @Entity
 @Table(name = "delivery_slots")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
 public class DeliverySlot {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "slot_id")
+    @Column(name = "slot_id", nullable = false)
     private Integer slotId;
 
-    @Column(name = "order_id")
-    private Integer orderId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @OnDelete(action = OnDeleteAction.CASCADE)
+    @JoinColumn(name = "order_id")
+    private Order order;
 
     @Column(name = "delivery_date", nullable = false)
     private LocalDate deliveryDate;
 
-    @Column(name = "time_slot")
+    @Column(name = "time_slot", length = 50)
     private String timeSlot;
 
-    @Column(name = "courier_name")
+    @Column(name = "courier_name", length = 100)
     private String courierName;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "status")
-    private DeliveryStatus status = DeliveryStatus.PENDING;
+    @ColumnDefault("'pending'")
+    @Column(name = "status", nullable = false)
+    private Status status;
 
-    @ManyToOne
-    @JoinColumn(name = "order_id", insertable = false, updatable = false)
-    private Order order;
-
-    public enum DeliveryStatus {
-        PENDING, ASSIGNED, IN_TRANSIT, DELIVERED
+    public enum Status {
+        pending, assigned, in_transit, delivered
     }
 }

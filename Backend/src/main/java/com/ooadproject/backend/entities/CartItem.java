@@ -1,36 +1,39 @@
 package com.ooadproject.backend.entities;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.annotations.OnDelete;
-import org.hibernate.annotations.OnDeleteAction;
 import org.hibernate.type.SqlTypes;
 
-@Data
+import java.util.Map;
+
 @Entity
 @Table(name = "cart_items")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class CartItem {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "item_id", nullable = false)
     private Integer itemId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @OnDelete(action = OnDeleteAction.CASCADE)
     @JoinColumn(name = "cart_id")
     private Cart cart;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @OnDelete(action = OnDeleteAction.SET_NULL)
     @JoinColumn(name = "product_id")
     private Product product;
 
-    @Column(name = "quantity", nullable = false)
+    @Column(nullable = false)
+    @NotNull(message = "Quantity is required")
+    @Min(value = 1, message = "Quantity must be at least 1")
     private Integer quantity;
 
-    @Column(name = "personalization_details")
     @JdbcTypeCode(SqlTypes.JSON)
-    private JsonNode personalizationDetails;
+    private Map<String, Object> personalizationDetails;
 }

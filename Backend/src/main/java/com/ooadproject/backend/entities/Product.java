@@ -2,56 +2,64 @@ package com.ooadproject.backend.entities;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
 import lombok.Data;
-import org.hibernate.annotations.ColumnDefault;
-import org.hibernate.annotations.OnDelete;
-import org.hibernate.annotations.OnDeleteAction;
+import lombok.NoArgsConstructor;
 
-import java.util.LinkedHashSet;
-import java.util.Set;
+import java.math.BigDecimal;
+import java.util.List;
 
-@Data
 @Entity
 @Table(name = "products")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class Product {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "product_id", nullable = false)
     private Integer productId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @OnDelete(action = OnDeleteAction.SET_NULL)
     @JoinColumn(name = "category_id")
     private Category category;
 
-    @Column(name = "name", nullable = false, length = 100)
+    @Column(nullable = false, length = 100)
+    @NotBlank(message = "Product name is required")
     private String name;
 
-    @Column(name = "description")
+    @Column(columnDefinition = "TEXT")
     private String description;
 
-    @Column(name = "price", nullable = false)
-    private Double price;
+    @Column(nullable = false, precision = 10, scale = 2)
+    @NotNull(message = "Price is required")
+    @DecimalMin(value = "0.00", message = "Price must be positive")
+    private BigDecimal price;
 
-    @Column(name = "image_url", length = 255)
+    @Column(length = 255)
     private String imageUrl;
 
-    @ColumnDefault("0")
-    @Column(name = "stock_quantity")
-    private Integer stockQuantity;
+    @Column(columnDefinition = "INT DEFAULT 0")
+    @Min(value = 0, message = "Stock quantity cannot be negative")
+    private Integer stockQuantity = 0;
 
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonIgnore
-    @OneToMany(mappedBy = "product", fetch = FetchType.LAZY)
-    private Set<CartItem> cartItems = new LinkedHashSet<>();
+    private List<OrderItem> orderItems;
 
-    @OneToOne(mappedBy = "product")
-    private Inventory inventory;
-
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonIgnore
-    @OneToMany(mappedBy = "product", fetch = FetchType.LAZY)
-    private Set<OrderItem> orderItems = new LinkedHashSet<>();
+    private List<CartItem> cartItems;
 
-    @JsonIgnore
-    @OneToMany(mappedBy = "product", fetch = FetchType.LAZY)
-    private Set<PersonalizationOption> personalizationOptions = new LinkedHashSet<>();
+    // Helper methods
+    public boolean isInStock() {
+        return stockQuantity != null && stockQuantity > 0;
+    }
+
+    public boolean isAvailable() {
+        return isInStock();
+    }
 }

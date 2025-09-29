@@ -30,7 +30,7 @@ export function Header({ onCartClick, onSearchClick }: HeaderProps) {
             </span>
           </div>
           <h1 className="text-2xl font-bold bg-gradient-to-r from-teddy-700 to-pink-600 bg-clip-text text-transparent">
-            TeddyLove
+            Pinky Promise
           </h1>
         </div>
 
@@ -115,6 +115,12 @@ export function Header({ onCartClick, onSearchClick }: HeaderProps) {
                     className={currentUser === "admin" ? "bg-accent" : ""}
                   >
                     👨‍💼 Admin Dashboard
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => setCurrentUser("cashier")}
+                    className={currentUser === "cashier" ? "bg-accent" : ""}
+                  >
+                    🏪 POS System
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={logout}>
                     🚪 Sign Out
