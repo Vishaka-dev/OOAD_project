@@ -56,8 +56,11 @@ export function Cart({ isOpen, onClose }: CartProps) {
               </div>
             ) : (
               <div className="space-y-4">
-                {cart.map((item) => (
-                  <Card key={item.id} className="overflow-hidden">
+                {cart.map((item, index) => (
+                  <Card
+                    key={`${item.id}-${item.backendId || index}`}
+                    className="overflow-hidden"
+                  >
                     <CardContent className="p-4">
                       <div className="flex space-x-4">
                         <div className="h-16 w-16 rounded-md bg-gradient-to-br from-teddy-50 to-pink-50 overflow-hidden">

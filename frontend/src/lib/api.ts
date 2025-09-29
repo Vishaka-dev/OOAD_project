@@ -1,3 +1,16 @@
+import {
+  Category,
+  Product,
+  ProductFilterParams,
+  ProductSearchParams,
+  PriceRangeParams,
+  CreateCategoryRequest,
+  UpdateCategoryRequest,
+  CreateProductRequest,
+  UpdateProductRequest,
+  UpdateStockRequest
+} from '@/types/product';
+
 const API_BASE_URL = 'http://localhost:8081/api';
 
 // Types for API requests and responses
@@ -25,14 +38,19 @@ export interface CartItemDTO {
   productName: string;
   productPrice: number;
   quantity: number;
-  personalizationDetails?: any;
+  personalizationDetails?: Record<string, unknown>;
 }
 
 export interface CheckoutRequest {
-  customerName: string;
-  customerEmail: string;
-  shippingAddress: string;
-  paymentMethod: string;
+  deliveryAddress: string;
+  contactNumber: string;
+  paymentMethod: 'credit_card' | 'payhear' | 'cod';
+  // Optional fields for credit card payments
+  cardNumber?: string;
+  cardHolderName?: string;
+  expiryMonth?: string;
+  expiryYear?: string;
+  cvv?: string;
 }
 
 export interface OrderResponse {
@@ -42,7 +60,7 @@ export interface OrderResponse {
   totalAmount: number;
   status: string;
   orderDate: string;
-  items: any[];
+  items: unknown[];
 }
 
 class ApiClient {
@@ -59,13 +77,17 @@ class ApiClient {
     options: RequestInit = {}
   ): Promise<T> {
     const url = `${this.baseURL}${endpoint}`;
-    const headers: HeadersInit = {
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      ...options.headers,
     };
 
     if (this.token) {
       headers.Authorization = `Bearer ${this.token}`;
+    }
+
+    // Merge with any existing headers
+    if (options.headers) {
+      Object.assign(headers, options.headers);
     }
 
     const config: RequestInit = {
@@ -73,23 +95,42 @@ class ApiClient {
       headers,
     };
 
+    console.log('🔄 Making API request:', { url, method: options.method || 'GET', headers });
+
     try {
       const response = await fetch(url, config);
-      
+      console.log('📡 API response received:', {
+        url,
+        status: response.status,
+        ok: response.ok,
+        headers: Object.fromEntries(response.headers.entries())
+      });
+
       if (!response.ok) {
         const errorData = await response.text();
+        console.error('❌ API request failed:', { url, status: response.status, error: errorData });
         throw new Error(errorData || `HTTP error! status: ${response.status}`);
       }
 
       // Handle empty responses
       const text = await response.text();
       if (!text) {
+        console.log('⚠️ Empty response received for:', url);
         return {} as T;
       }
 
-      return JSON.parse(text);
+      // Try to parse as JSON, but handle non-JSON responses gracefully
+      try {
+        const data = JSON.parse(text);
+        console.log('✅ API data parsed successfully:', { url, dataLength: Array.isArray(data) ? data.length : 'not array' });
+        return data;
+      } catch (parseError) {
+        // If it's not JSON, return the text as a simple object
+        console.log('⚠️ Non-JSON response received for:', url, 'text:', text);
+        return { message: text } as T;
+      }
     } catch (error) {
-      console.error('API request failed:', error);
+      console.error('❌ API request failed:', { url, error });
       throw error;
     }
   }
@@ -100,7 +141,7 @@ class ApiClient {
       method: 'POST',
       body: JSON.stringify(credentials),
     });
-    
+
     this.token = response.token;
     localStorage.setItem('auth_token', response.token);
     return response;
@@ -111,7 +152,7 @@ class ApiClient {
       method: 'POST',
       body: JSON.stringify(userData),
     });
-    
+
     this.token = response.token;
     localStorage.setItem('auth_token', response.token);
     return response;
@@ -136,7 +177,7 @@ class ApiClient {
     return total;
   }
 
-  async addToCart(productId: number, quantity: number, personalizationDetails?: any): Promise<void> {
+  async addToCart(productId: number, quantity: number, personalizationDetails?: Record<string, unknown>): Promise<void> {
     const params = new URLSearchParams({
       productId: productId.toString(),
       quantity: quantity.toString(),
@@ -170,12 +211,27 @@ class ApiClient {
     });
   }
 
+  async createNewCart(): Promise<void> {
+    await this.request('/cart/new', {
+      method: 'POST',
+    });
+  }
+
   // Order methods
   async checkout(checkoutData: CheckoutRequest): Promise<string> {
-    return this.request<string>('/orders/checkout', {
+    const response = await this.request<string | { message: string }>('/orders/checkout', {
       method: 'POST',
       body: JSON.stringify(checkoutData),
     });
+
+    // Handle both string and object responses
+    if (typeof response === 'string') {
+      return response;
+    } else if (response && typeof response === 'object' && 'message' in response) {
+      return response.message;
+    } else {
+      return 'Order placed successfully';
+    }
   }
 
   async getMyOrders(): Promise<OrderResponse[]> {
@@ -185,8 +241,125 @@ class ApiClient {
   async getOrder(orderId: number): Promise<OrderResponse> {
     return this.request<OrderResponse>(`/orders/${orderId}`);
   }
+
+  // Member A - Product Catalog API Methods
+
+  // Category methods
+  async getCategories(): Promise<Category[]> {
+    return this.request<Category[]>('/categories');
+  }
+
+  async getCategory(categoryId: number): Promise<Category> {
+    return this.request<Category>(`/categories/${categoryId}`);
+  }
+
+  async getCategoriesWithProducts(): Promise<Category[]> {
+    return this.request<Category[]>('/categories/with-products');
+  }
+
+  // Product methods
+  async getProducts(): Promise<Product[]> {
+    return this.request<Product[]>('/products');
+  }
+
+  async getProduct(productId: number): Promise<Product> {
+    return this.request<Product>(`/products/${productId}`);
+  }
+
+  async getProductsByCategory(categoryId: number): Promise<Product[]> {
+    return this.request<Product[]>(`/products/category/${categoryId}`);
+  }
+
+  async searchProducts(params: ProductSearchParams): Promise<Product[]> {
+    const searchParams = new URLSearchParams();
+    searchParams.append('name', params.name);
+    if (params.page) searchParams.append('page', params.page.toString());
+    if (params.size) searchParams.append('size', params.size.toString());
+
+    return this.request<Product[]>(`/products/search?${searchParams}`);
+  }
+
+  async getInStockProducts(): Promise<Product[]> {
+    return this.request<Product[]>('/products/in-stock');
+  }
+
+  async getProductsByPriceRange(params: PriceRangeParams): Promise<Product[]> {
+    const searchParams = new URLSearchParams();
+    searchParams.append('minPrice', params.minPrice.toString());
+    searchParams.append('maxPrice', params.maxPrice.toString());
+    if (params.page) searchParams.append('page', params.page.toString());
+    if (params.size) searchParams.append('size', params.size.toString());
+
+    return this.request<Product[]>(`/products/price-range?${searchParams}`);
+  }
+
+  async filterProducts(params: ProductFilterParams): Promise<Product[]> {
+    const searchParams = new URLSearchParams();
+    if (params.name) searchParams.append('name', params.name);
+    if (params.categoryId) searchParams.append('categoryId', params.categoryId.toString());
+    if (params.minPrice) searchParams.append('minPrice', params.minPrice.toString());
+    if (params.maxPrice) searchParams.append('maxPrice', params.maxPrice.toString());
+    if (params.inStock !== undefined) searchParams.append('inStock', params.inStock.toString());
+    if (params.page) searchParams.append('page', params.page.toString());
+    if (params.size) searchParams.append('size', params.size.toString());
+
+    return this.request<Product[]>(`/products/filter?${searchParams}`);
+  }
+
+  // Admin Category methods
+  async createCategory(categoryData: CreateCategoryRequest): Promise<Category> {
+    return this.request<Category>('/categories/admin', {
+      method: 'POST',
+      body: JSON.stringify(categoryData),
+    });
+  }
+
+  async updateCategory(categoryId: number, categoryData: UpdateCategoryRequest): Promise<Category> {
+    return this.request<Category>(`/categories/admin/${categoryId}`, {
+      method: 'PUT',
+      body: JSON.stringify(categoryData),
+    });
+  }
+
+  async deleteCategory(categoryId: number): Promise<void> {
+    await this.request<void>(`/categories/admin/${categoryId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Admin Product methods
+  async createProduct(productData: CreateProductRequest): Promise<Product> {
+    return this.request<Product>('/products/admin', {
+      method: 'POST',
+      body: JSON.stringify(productData),
+    });
+  }
+
+  async updateProduct(productId: number, productData: UpdateProductRequest): Promise<Product> {
+    return this.request<Product>(`/products/admin/${productId}`, {
+      method: 'PUT',
+      body: JSON.stringify(productData),
+    });
+  }
+
+  async deleteProduct(productId: number): Promise<void> {
+    await this.request<void>(`/products/admin/${productId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async updateProductStock(productId: number, stock: number): Promise<Product> {
+    const params = new URLSearchParams({ stock: stock.toString() });
+    return this.request<Product>(`/products/admin/${productId}/stock?${params}`, {
+      method: 'PUT',
+    });
+  }
+
+  async getLowStockProducts(threshold: number = 10): Promise<Product[]> {
+    const params = new URLSearchParams({ threshold: threshold.toString() });
+    return this.request<Product[]>(`/products/admin/low-stock?${params}`);
+  }
 }
 
 // Create and export a singleton instance
 export const apiClient = new ApiClient(API_BASE_URL);
-

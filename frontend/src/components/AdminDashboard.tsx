@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import {
   Plus,
   Package,
@@ -10,6 +11,7 @@ import {
   ArrowLeft,
   Home,
   ShoppingCart,
+  Settings,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,10 +27,32 @@ import {
 } from "@/components/ui/table";
 
 export function AdminDashboard() {
-  const { products, orders, updateProduct, setCurrentUser } = useStore();
+  const {
+    products,
+    orders,
+    updateProduct,
+    setCurrentUser,
+    fetchProducts,
+    fetchCategories,
+  } = useStore();
   const [selectedTab, setSelectedTab] = useState<
     "overview" | "products" | "orders"
   >("overview");
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Load data on component mount
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        await Promise.all([fetchProducts(), fetchCategories()]);
+      } catch (error) {
+        console.error("Failed to load admin data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadData();
+  }, [fetchProducts, fetchCategories]);
 
   // Calculate stats
   const totalRevenue = orders.reduce((sum, order) => sum + order.total, 0);
@@ -88,10 +112,18 @@ export function AdminDashboard() {
             </h1>
             <p className="text-muted-foreground">Manage your TeddyLove store</p>
           </div>
-          <Button variant="teddy">
-            <Plus className="mr-2 h-4 w-4" />
-            Add Product
-          </Button>
+          <div className="flex gap-2">
+            <Button asChild>
+              <Link to="/admin/products">
+                <Package className="mr-2 h-4 w-4" />
+                Manage Products
+              </Link>
+            </Button>
+            <Button variant="outline">
+              <Settings className="mr-2 h-4 w-4" />
+              Settings
+            </Button>
+          </div>
         </div>
 
         {/* Tabs */}
