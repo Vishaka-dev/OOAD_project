@@ -3,6 +3,9 @@ package com.ooadproject.backend.entities;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.math.BigDecimal;
@@ -10,6 +13,9 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "payments")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class Payment {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -42,82 +48,5 @@ public class Payment {
 
     public enum PaymentMethod {
         credit_card, payhear, cod
-    }
-
-    // ---------- Constructors ----------
-    public Payment() {
-    }
-
-    public Payment(Integer paymentId,
-                   Order order,
-                   BigDecimal amount,
-                   PaymentStatus status,
-                   String transactionId,
-                   PaymentMethod paymentMethod,
-                   LocalDateTime createdAt) {
-        this.paymentId = paymentId;
-        this.order = order;
-        this.amount = amount;
-        this.status = status;
-        this.transactionId = transactionId;
-        this.paymentMethod = paymentMethod;
-        this.createdAt = createdAt;
-    }
-
-    // ---------- Getters & Setters ----------
-    public Integer getPaymentId() {
-        return paymentId;
-    }
-
-    public void setPaymentId(Integer paymentId) {
-        this.paymentId = paymentId;
-    }
-
-    public Order getOrder() {
-        return order;
-    }
-
-    public void setOrder(Order order) {
-        this.order = order;
-    }
-
-    public BigDecimal getAmount() {
-        return amount;
-    }
-
-    public void setAmount(BigDecimal amount) {
-        this.amount = amount;
-    }
-
-    public PaymentStatus getStatus() {
-        return status;
-    }
-
-    public void setStatus(PaymentStatus status) {
-        this.status = status;
-    }
-
-    public String getTransactionId() {
-        return transactionId;
-    }
-
-    public void setTransactionId(String transactionId) {
-        this.transactionId = transactionId;
-    }
-
-    public PaymentMethod getPaymentMethod() {
-        return paymentMethod;
-    }
-
-    public void setPaymentMethod(PaymentMethod paymentMethod) {
-        this.paymentMethod = paymentMethod;
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
     }
 }

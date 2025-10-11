@@ -37,6 +37,25 @@ export interface UIProduct {
 export interface CartItem extends UIProduct {
   quantity: number;
   backendId?: number; // For backend cart item ID
+  personalizationDetails?: PersonalizationDetails;
+  extraPrice?: number; // Additional price for personalizations
+  totalPrice?: number; // Total price including personalization extras
+}
+
+export interface PersonalizationDetails {
+  occasion?: string;
+  flowersCount?: string;
+  flowersColor?: string;
+  wrappingPaper?: string;
+  teddy?: string;
+  teddyType?: string;
+  teddyColor?: string;
+  feltDesign?: string;
+  softToys?: string;
+  usiType?: string;
+  massage?: string;
+  color?: string;
+  maxLength?: number;
 }
 
 export interface Order {
@@ -103,4 +122,15 @@ export interface UpdateProductRequest {
 
 export interface UpdateStockRequest {
   stock: number;
+}
+
+// Personalization Types
+export interface PersonalizationOptionDTO {
+  optionId: number;
+  productId: number;
+  usiType?: string;
+  massage?: string;
+  color?: string;
+  extraPrice?: number;
+  maxLength?: number;
 }

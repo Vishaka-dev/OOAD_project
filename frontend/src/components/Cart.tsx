@@ -104,6 +104,11 @@ export function Cart({ isOpen, onClose }: CartProps) {
                                 onClick={() =>
                                   updateCartQuantity(item.id, item.quantity + 1)
                                 }
+                                disabled={
+                                  item.stock && item.stock !== 999
+                                    ? item.quantity >= item.stock
+                                    : false
+                                }
                               >
                                 <Plus className="h-3 w-3" />
                               </Button>

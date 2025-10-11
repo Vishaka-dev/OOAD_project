@@ -4,6 +4,9 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -12,6 +15,9 @@ import java.util.Map;
 
 @Entity
 @Table(name = "order_items")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class OrderItem {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -37,66 +43,4 @@ public class OrderItem {
 
     @JdbcTypeCode(SqlTypes.JSON)
     private Map<String, Object> personalizationDetails;
-
-    // ---------- Constructors ----------
-    public OrderItem() {
-    }
-
-    public OrderItem(Integer itemId, Order order, Product product, Integer quantity, BigDecimal price, Map<String, Object> personalizationDetails) {
-        this.itemId = itemId;
-        this.order = order;
-        this.product = product;
-        this.quantity = quantity;
-        this.price = price;
-        this.personalizationDetails = personalizationDetails;
-    }
-
-    // ---------- Getters & Setters ----------
-    public Integer getItemId() {
-        return itemId;
-    }
-
-    public void setItemId(Integer itemId) {
-        this.itemId = itemId;
-    }
-
-    public Order getOrder() {
-        return order;
-    }
-
-    public void setOrder(Order order) {
-        this.order = order;
-    }
-
-    public Product getProduct() {
-        return product;
-    }
-
-    public void setProduct(Product product) {
-        this.product = product;
-    }
-
-    public Integer getQuantity() {
-        return quantity;
-    }
-
-    public void setQuantity(Integer quantity) {
-        this.quantity = quantity;
-    }
-
-    public BigDecimal getPrice() {
-        return price;
-    }
-
-    public void setPrice(BigDecimal price) {
-        this.price = price;
-    }
-
-    public Map<String, Object> getPersonalizationDetails() {
-        return personalizationDetails;
-    }
-
-    public void setPersonalizationDetails(Map<String, Object> personalizationDetails) {
-        this.personalizationDetails = personalizationDetails;
-    }
 }

@@ -2,7 +2,10 @@ package com.ooadproject.backend.services;
 
 import com.ooadproject.backend.dto.CheckoutRequestDTO;
 import com.ooadproject.backend.entities.*;
-import com.ooadproject.backend.repositories.*;
+import com.ooadproject.backend.repositories.CartItemRepository;
+import com.ooadproject.backend.repositories.CartRepository;
+import com.ooadproject.backend.repositories.OrderItemRepository;
+import com.ooadproject.backend.repositories.OrderRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -22,6 +25,7 @@ public class CheckoutService {
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
     private final PaymentService paymentService;
+    private final ProductService productService;
     private final JavaMailSender mailSender;
 
     @Value("${app.mail.admin:admin@example.com}")
@@ -61,6 +65,10 @@ public class CheckoutService {
 
         order.setTotalPrice(total);
         order = orderRepository.save(order);
+
+        // Decrement stock quantities for all products in the order
+        System.out.println("🔄 Decrementing stock quantities for order: " + order.getOrderId());
+        productService.decrementStockForOrder(cart.getCartItems());
 
         // FIXED: Handle payment method properly
         Payment.PaymentMethod method = request.getPaymentMethod(); // Direct assignment since it's already enum

@@ -1,14 +1,23 @@
 package com.ooadproject.backend.services;
 
 import com.ooadproject.backend.dto.CartItemDTO;
-import com.ooadproject.backend.entities.*;
-import com.ooadproject.backend.repositories.*;
+import com.ooadproject.backend.entities.Cart;
+import com.ooadproject.backend.entities.CartItem;
+import com.ooadproject.backend.entities.Product;
+import com.ooadproject.backend.entities.User;
+import com.ooadproject.backend.repositories.CartItemRepository;
+import com.ooadproject.backend.repositories.CartRepository;
+import com.ooadproject.backend.repositories.ProductRepository;
+import com.ooadproject.backend.repositories.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
@@ -28,7 +37,7 @@ public class CartService {
     @Transactional
     public Cart getOrCreateCart(User user) {
         if (user == null) {
-            // For unauthenticated users (create a temporary cart)
+            // For unauthenticated users, create a temporary cart
             Cart cart = new Cart();
             cart.setUser(null); // Allow null user for temporary carts
             return cartRepository.save(cart);
@@ -42,8 +51,10 @@ public class CartService {
     }
 
     @Transactional
-    public CartItem addToCart(User user, Integer productId, Integer quantity, Map<String, Object> personalizationDetails) {
-        if (user == null) {// For unauthenticated users (use a default session ID)
+    public CartItem addToCart(User user, Integer productId, Integer quantity,
+            Map<String, Object> personalizationDetails) {
+        if (user == null) {
+            // For unauthenticated users, use a default session ID
             String sessionId = "anonymous";
             return addToSessionCart(sessionId, productId, quantity, personalizationDetails);
         }
@@ -74,7 +85,7 @@ public class CartService {
     }
 
     private CartItem addToSessionCart(String sessionId, Integer productId, Integer quantity,
-                                      Map<String, Object> personalizationDetails) {
+            Map<String, Object> personalizationDetails) {
         System.out.println("🔄 Adding to session cart: sessionId=" + sessionId + ", productId=" + productId
                 + ", quantity=" + quantity);
 
@@ -97,7 +108,14 @@ public class CartService {
             CartItemDTO item = existingItem.get();
             item.setQuantity(item.getQuantity() + quantity);
             item.setPersonalizationDetails(personalizationDetails);
-            item.setItemTotal(product.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())));
+
+            // Calculate extra price and total
+            BigDecimal extraPrice = calculateExtraPrice(personalizationDetails);
+            item.setExtraPrice(extraPrice);
+            BigDecimal baseTotal = product.getPrice().multiply(BigDecimal.valueOf(item.getQuantity()));
+            BigDecimal extraTotal = extraPrice.multiply(BigDecimal.valueOf(item.getQuantity()));
+            item.setItemTotal(baseTotal.add(extraTotal));
+
             System.out.println("🔄 Updated existing item: " + item);
         } else {
             CartItemDTO newItem = new CartItemDTO();
@@ -108,7 +126,14 @@ public class CartService {
             newItem.setImageUrl(product.getImageUrl());
             newItem.setQuantity(quantity);
             newItem.setPersonalizationDetails(personalizationDetails);
-            newItem.setItemTotal(product.getPrice().multiply(BigDecimal.valueOf(quantity)));
+
+            // Calculate extra price and total
+            BigDecimal extraPrice = calculateExtraPrice(personalizationDetails);
+            newItem.setExtraPrice(extraPrice);
+            BigDecimal baseTotal = product.getPrice().multiply(BigDecimal.valueOf(quantity));
+            BigDecimal extraTotal = extraPrice.multiply(BigDecimal.valueOf(quantity));
+            newItem.setItemTotal(baseTotal.add(extraTotal));
+
             cartItems.add(newItem);
             System.out.println("🔄 Added new item: " + newItem);
         }
@@ -166,7 +191,10 @@ public class CartService {
             cartItems.remove(item);
         } else {
             item.setQuantity(quantity);
-            item.setItemTotal(item.getProductPrice().multiply(BigDecimal.valueOf(quantity)));
+            // Recalculate total including extra price
+            BigDecimal baseTotal = item.getProductPrice().multiply(BigDecimal.valueOf(quantity));
+            BigDecimal extraTotal = item.getExtraPrice().multiply(BigDecimal.valueOf(quantity));
+            item.setItemTotal(baseTotal.add(extraTotal));
         }
     }
 
@@ -260,7 +288,90 @@ public class CartService {
         dto.setImageUrl(item.getProduct().getImageUrl());
         dto.setQuantity(item.getQuantity());
         dto.setPersonalizationDetails(item.getPersonalizationDetails());
-        dto.setItemTotal(item.getProduct().getPrice().multiply(BigDecimal.valueOf(item.getQuantity())));
+
+        // Calculate extra price based on personalization details
+        BigDecimal extraPrice = calculateExtraPrice(item.getPersonalizationDetails());
+        dto.setExtraPrice(extraPrice);
+
+        // Calculate total including extra price
+        BigDecimal baseTotal = item.getProduct().getPrice().multiply(BigDecimal.valueOf(item.getQuantity()));
+        BigDecimal extraTotal = extraPrice.multiply(BigDecimal.valueOf(item.getQuantity()));
+        dto.setItemTotal(baseTotal.add(extraTotal));
+
         return dto;
+    }
+
+    private BigDecimal calculateExtraPrice(Map<String, Object> personalizationDetails) {
+        if (personalizationDetails == null || personalizationDetails.isEmpty()) {
+            return BigDecimal.ZERO;
+        }
+
+        BigDecimal extraPrice = BigDecimal.ZERO;
+
+        // Occasion pricing
+        String occasion = (String) personalizationDetails.get("occasion");
+        if (occasion != null) {
+            switch (occasion) {
+                case "Graduation" -> extraPrice = extraPrice.add(BigDecimal.valueOf(5));
+                case "Birthday" -> extraPrice = extraPrice.add(BigDecimal.valueOf(3));
+                case "Valentine" -> extraPrice = extraPrice.add(BigDecimal.valueOf(8));
+                case "Mini" -> extraPrice = extraPrice.add(BigDecimal.valueOf(2));
+            }
+        }
+
+        // Flowers count pricing
+        String flowersCount = (String) personalizationDetails.get("flowersCount");
+        if (flowersCount != null) {
+            try {
+                int count = Integer.parseInt(flowersCount);
+                extraPrice = extraPrice.add(BigDecimal.valueOf(count));
+            } catch (NumberFormatException e) {
+                // Handle non-numeric values
+                switch (flowersCount) {
+                    case "3" -> extraPrice = extraPrice.add(BigDecimal.valueOf(3));
+                    case "5" -> extraPrice = extraPrice.add(BigDecimal.valueOf(5));
+                    case "7" -> extraPrice = extraPrice.add(BigDecimal.valueOf(7));
+                    case "9" -> extraPrice = extraPrice.add(BigDecimal.valueOf(9));
+                    case "12" -> extraPrice = extraPrice.add(BigDecimal.valueOf(12));
+                }
+            }
+        }
+
+        // Teddy pricing
+        String teddy = (String) personalizationDetails.get("teddy");
+        if ("With".equals(teddy)) {
+            extraPrice = extraPrice.add(BigDecimal.valueOf(15));
+        }
+
+        String teddyType = (String) personalizationDetails.get("teddyType");
+        if (teddyType != null) {
+            switch (teddyType) {
+                case "handmade" -> extraPrice = extraPrice.add(BigDecimal.valueOf(5));
+                case "fluffy" -> extraPrice = extraPrice.add(BigDecimal.valueOf(10));
+            }
+        }
+
+        // Wrapping paper pricing
+        String wrappingPaper = (String) personalizationDetails.get("wrappingPaper");
+        if (wrappingPaper != null) {
+            switch (wrappingPaper) {
+                case "Premium" -> extraPrice = extraPrice.add(BigDecimal.valueOf(3));
+                case "Gift Box" -> extraPrice = extraPrice.add(BigDecimal.valueOf(5));
+            }
+        }
+
+        // Soft toys pricing
+        String softToys = (String) personalizationDetails.get("softToys");
+        if ("Yes".equals(softToys)) {
+            extraPrice = extraPrice.add(BigDecimal.valueOf(8));
+        }
+
+        // Custom felt design pricing
+        String feltDesign = (String) personalizationDetails.get("feltDesign");
+        if (feltDesign != null && !feltDesign.trim().isEmpty()) {
+            extraPrice = extraPrice.add(BigDecimal.valueOf(5));
+        }
+
+        return extraPrice;
     }
 }

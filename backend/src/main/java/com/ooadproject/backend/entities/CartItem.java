@@ -3,6 +3,9 @@ package com.ooadproject.backend.entities;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -10,6 +13,9 @@ import java.util.Map;
 
 @Entity
 @Table(name = "cart_items")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class CartItem {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -31,57 +37,31 @@ public class CartItem {
     @JdbcTypeCode(SqlTypes.JSON)
     private Map<String, Object> personalizationDetails;
 
-    // Constructors
-    public CartItem() {
-    }
+    // Denormalized columns for easier SQL reporting (nullable)
+    @Column(name = "occasion")
+    private String occasion;
 
-    public CartItem(Integer itemId, Cart cart, Product product, Integer quantity,
-                    Map<String, Object> personalizationDetails) {
-        this.itemId = itemId;
-        this.cart = cart;
-        this.product = product;
-        this.quantity = quantity;
-        this.personalizationDetails = personalizationDetails;
-    }
+    @Column(name = "teddy")
+    private String teddy;
 
-    // Getters & Setters
-    public Integer getItemId() {
-        return itemId;
-    }
+    @Column(name = "teddy_type")
+    private String teddyType;
 
-    public void setItemId(Integer itemId) {
-        this.itemId = itemId;
-    }
+    @Column(name = "teddy_color")
+    private String teddyColor;
 
-    public Cart getCart() {
-        return cart;
-    }
+    @Column(name = "flowers_count")
+    private Integer flowersCount;
 
-    public void setCart(Cart cart) {
-        this.cart = cart;
-    }
+    @Column(name = "flowers_color")
+    private String flowersColor;
 
-    public Product getProduct() {
-        return product;
-    }
+    @Column(name = "wrapping_paper")
+    private String wrappingPaper;
 
-    public void setProduct(Product product) {
-        this.product = product;
-    }
+    @Column(name = "soft_toys")
+    private String softToys;
 
-    public Integer getQuantity() {
-        return quantity;
-    }
-
-    public void setQuantity(Integer quantity) {
-        this.quantity = quantity;
-    }
-
-    public Map<String, Object> getPersonalizationDetails() {
-        return personalizationDetails;
-    }
-
-    public void setPersonalizationDetails(Map<String, Object> personalizationDetails) {
-        this.personalizationDetails = personalizationDetails;
-    }
+    @Column(name = "felt_design")
+    private String feltDesign;
 }

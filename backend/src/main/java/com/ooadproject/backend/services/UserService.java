@@ -1,7 +1,7 @@
 package com.ooadproject.backend.services;
 
-import com.ooadproject.backend.entities.User;
 import com.ooadproject.backend.dto.RegisterRequestDTO;
+import com.ooadproject.backend.entities.User;
 import com.ooadproject.backend.repositories.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;

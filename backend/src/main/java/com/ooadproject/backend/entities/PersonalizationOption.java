@@ -6,8 +6,6 @@ import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 
-import java.math.BigDecimal;
-
 @Data
 @Entity
 @Table(name = "personalization_options")
@@ -34,92 +32,14 @@ public class PersonalizationOption {
     private Color color;
 
     @ColumnDefault("0.00")
-    @Column(name = "extra_price")
-    private Double extraPrice;
+    @Column(name = "extra_price", precision = 10, scale = 2)
+    private java.math.BigDecimal extraPrice;
 
     @ColumnDefault("20")
     @Column(name = "max_length")
     private Integer maxLength;
 
     public enum Color {
-        Red, Purple, White, Yello
+        Red, Purple, White, Yellow
     }
-
-    // ---------- Constructors ----------
-    public PersonalizationOption() {
-    }
-
-    public PersonalizationOption(Integer optionId,
-                                 Product product,
-                                 String usiType,
-                                 String massage,
-                                 Color color,
-                                 Double extraPrice,
-                                 Integer maxLength) {
-        this.optionId = optionId;
-        this.product = product;
-        this.usiType = usiType;
-        this.massage = massage;
-        this.color = color;
-        this.extraPrice = extraPrice;
-        this.maxLength = maxLength;
-    }
-
-    // ---------- Getters & Setters ----------
-    public Integer getOptionId() {
-        return optionId;
-    }
-
-    public void setOptionId(Integer optionId) {
-        this.optionId = optionId;
-    }
-
-    public Product getProduct() {
-        return product;
-    }
-
-    public void setProduct(Product product) {
-        this.product = product;
-    }
-
-    public String getUsiType() {
-        return usiType;
-    }
-
-    public void setUsiType(String usiType) {
-        this.usiType = usiType;
-    }
-
-    public String getMassage() {
-        return massage;
-    }
-
-    public void setMassage(String massage) {
-        this.massage = massage;
-    }
-
-    public Color getColor() {
-        return color;
-    }
-
-    public void setColor(Color color) {
-        this.color = color;
-    }
-
-    public Double getExtraPrice() {
-        return extraPrice;
-    }
-
-    public void setExtraPrice(Double extraPrice) {
-        this.extraPrice = extraPrice;
-    }
-
-    public Integer getMaxLength() {
-        return maxLength;
-    }
-
-    public void setMaxLength(Integer maxLength) {
-        this.maxLength = maxLength;
-    }
-
 }

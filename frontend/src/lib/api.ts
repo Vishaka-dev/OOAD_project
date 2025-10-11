@@ -57,10 +57,70 @@ export interface OrderResponse {
   orderId: number;
   customerName: string;
   customerEmail: string;
-  totalAmount: number;
+  totalPrice: number;
   status: string;
   orderDate: string;
-  items: unknown[];
+  orderItems: unknown[];
+}
+
+// Dashboard interfaces
+export interface AdminDashboardStatsDTO {
+  totalOrders: number;
+  pendingOrders: number;
+  confirmedOrders: number;
+  shippedOrders: number;
+  deliveredOrders: number;
+  cancelledOrders: number;
+  totalRevenue: number;
+  todayRevenue: number;
+  weeklyRevenue: number;
+  monthlyRevenue: number;
+  totalCustomers: number;
+  totalProducts: number;
+  lowStockProducts: number;
+  outOfStockProducts: number;
+  activeProducts: number;
+}
+
+export interface OrderSummaryDTO {
+  orderId: number;
+  customerName: string;
+  orderDate: string;
+  status: string;
+  totalPrice: number;
+  itemCount: number;
+}
+
+export interface ProductSalesDTO {
+  productId: number;
+  productName: string;
+  categoryName: string;
+  quantitySold: number;
+  totalRevenue: number;
+  averagePrice: number;
+}
+
+export interface SalesReportDTO {
+  date: string;
+  orderCount: number;
+  totalSales: number;
+  averageOrderValue: number;
+}
+
+export interface PaginatedOrderResponse {
+  content: OrderResponse[];
+  pageable: {
+    pageNumber: number;
+    pageSize: number;
+  };
+  last: boolean;
+  totalPages: number;
+  totalElements: number;
+  first: boolean;
+  size: number;
+  number: number;
+  numberOfElements: number;
+  empty: boolean;
 }
 
 class ApiClient {
@@ -81,8 +141,10 @@ class ApiClient {
       'Content-Type': 'application/json',
     };
 
-    if (this.token) {
-      headers.Authorization = `Bearer ${this.token}`;
+    // Always check localStorage for the latest token
+    const currentToken = localStorage.getItem('auth_token');
+    if (currentToken) {
+      headers.Authorization = `Bearer ${currentToken}`;
     }
 
     // Merge with any existing headers
@@ -96,6 +158,7 @@ class ApiClient {
     };
 
     console.log('🔄 Making API request:', { url, method: options.method || 'GET', headers });
+    console.log('🔄 Auth token being sent:', currentToken);
 
     try {
       const response = await fetch(url, config);
@@ -336,6 +399,7 @@ class ApiClient {
   }
 
   async updateProduct(productId: number, productData: UpdateProductRequest): Promise<Product> {
+    console.log('🔄 API Client - Updating product:', productId, productData);
     return this.request<Product>(`/products/admin/${productId}`, {
       method: 'PUT',
       body: JSON.stringify(productData),
@@ -358,6 +422,76 @@ class ApiClient {
   async getLowStockProducts(threshold: number = 10): Promise<Product[]> {
     const params = new URLSearchParams({ threshold: threshold.toString() });
     return this.request<Product[]>(`/products/admin/low-stock?${params}`);
+  }
+
+  // Dashboard methods
+  async getDashboardStats(): Promise<AdminDashboardStatsDTO> {
+    return this.request<AdminDashboardStatsDTO>('/admin/dashboard/stats');
+  }
+
+  async getSalesReport(startDate: string, endDate: string): Promise<SalesReportDTO[]> {
+    const params = new URLSearchParams({
+      startDate,
+      endDate,
+    });
+    return this.request<SalesReportDTO[]>(`/admin/dashboard/sales-report?${params}`);
+  }
+
+  async getTopSellingProducts(limit: number = 10): Promise<ProductSalesDTO[]> {
+    const params = new URLSearchParams({ limit: limit.toString() });
+    return this.request<ProductSalesDTO[]>(`/admin/dashboard/top-products?${params}`);
+  }
+
+  async getRecentOrders(limit: number = 10): Promise<OrderSummaryDTO[]> {
+    const params = new URLSearchParams({ limit: limit.toString() });
+    return this.request<OrderSummaryDTO[]>(`/admin/dashboard/recent-orders?${params}`);
+  }
+
+  async getAllOrders(page: number = 0, size: number = 10): Promise<PaginatedOrderResponse> {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      size: size.toString(),
+    });
+    return this.request<PaginatedOrderResponse>(`/orders/admin/all?${params}`);
+  }
+
+  async updateOrderStatus(orderId: number, status: string): Promise<void> {
+    return this.request(`/orders/admin/${orderId}/status`, {
+      method: 'PUT',
+      body: JSON.stringify({ status }),
+    });
+  }
+
+  // Personalization methods
+  async getPersonalizationOptions(productId: number): Promise<any[]> {
+    return this.request<any[]>(`/personalization/products/${productId}/options`);
+  }
+
+  async createPersonalizationOption(productId: number, optionData: any): Promise<any> {
+    return this.request<any>(`/personalization/products/${productId}/options`, {
+      method: 'POST',
+      body: JSON.stringify(optionData),
+    });
+  }
+
+  async updatePersonalizationOption(optionId: number, optionData: any): Promise<any> {
+    return this.request<any>(`/personalization/options/${optionId}`, {
+      method: 'PUT',
+      body: JSON.stringify(optionData),
+    });
+  }
+
+  async deletePersonalizationOption(optionId: number): Promise<void> {
+    return this.request(`/personalization/options/${optionId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async addPersonalizedToCart(request: any): Promise<any> {
+    return this.request<any>('/personalization/add-to-cart', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    });
   }
 }
 

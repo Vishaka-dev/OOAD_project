@@ -4,7 +4,9 @@ import com.ooadproject.backend.dto.CheckoutRequestDTO;
 import com.ooadproject.backend.dto.OrderItemDTO;
 import com.ooadproject.backend.dto.OrderResponseDTO;
 import com.ooadproject.backend.entities.*;
-import com.ooadproject.backend.repositories.*;
+import com.ooadproject.backend.repositories.OrderItemRepository;
+import com.ooadproject.backend.repositories.OrderRepository;
+import com.ooadproject.backend.repositories.PaymentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -25,6 +27,8 @@ public class OrderService {
     private final PaymentRepository paymentRepository;
     private final CartService cartService;
     private final PaymentService paymentService;
+    private final ProductService productService;
+    private final EmailService emailService;
 
     @Transactional
     public Order createOrder(User user, CheckoutRequestDTO request) {
@@ -61,6 +65,10 @@ public class OrderService {
             orderItemRepository.save(orderItem);
         }
 
+        // Decrement stock quantities for all products in the order
+        System.out.println("🔄 Decrementing stock quantities for order: " + order.getOrderId());
+        productService.decrementStockForOrder(cartItems);
+
         // Process payment
         Payment payment = paymentService.processPayment(order, request);
 
@@ -68,9 +76,18 @@ public class OrderService {
             order.setStatus(Order.OrderStatus.Confirmed);
             orderRepository.save(order);
 
-            // Clear cart
-            cartService.clearCart(user);
+            // Send confirmation email
+            emailService.sendOrderConfirmation(order);
+
+            // Send comprehensive order summary to both customer and admin
+            emailService.sendOrderSummary(order);
         }
+
+        // Always clear the user's cart after an order is created to avoid stale cart
+        // items
+        // This prevents duplicate items lingering across checkouts regardless of
+        // payment method/status
+        cartService.clearCart(user);
 
         return order;
     }
@@ -103,6 +120,16 @@ public class OrderService {
 
         order.setStatus(status);
         order = orderRepository.save(order);
+
+        // Send status update email
+        emailService.sendOrderStatusUpdate(order);
+
+        // Send additional emails for important status changes
+        if (status == Order.OrderStatus.Shipped) {
+            emailService.sendDeliveryNotification(order);
+        } else if (status == Order.OrderStatus.Cancelled) {
+            emailService.sendOrderCancellation(order);
+        }
 
         return order;
     }

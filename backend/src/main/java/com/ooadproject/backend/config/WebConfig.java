@@ -5,8 +5,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import org.springframework.web.servlet.config.annotation.CorsRegistry;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.util.List;
 
@@ -18,7 +16,9 @@ public class WebConfig {
         CorsConfiguration config = new CorsConfiguration();
 
         // Add your frontend URL(s) explicitly
-        config.setAllowedOriginPatterns(List.of("http://localhost:5178"));
+        config.setAllowedOriginPatterns(
+                List.of("http://localhost:5173", "http://localhost:5178", "http://localhost:5179",
+                        "http://localhost:5180", "http://localhost:3000"));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);

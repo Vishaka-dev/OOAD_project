@@ -16,9 +16,9 @@ interface StoreState {
 
   // Products (UI format for frontend compatibility)
   products: UIProduct[];
-  categories: { id: string; name: string; description: string; productCount: number }[];
+  categories: any[];
   setProducts: (products: UIProduct[]) => void;
-  setCategories: (categories: { id: string; name: string; description: string; productCount: number }[]) => void;
+  setCategories: (categories: any[]) => void;
   addProduct: (product: UIProduct) => void;
   updateProduct: (id: string, updates: Partial<UIProduct>) => void;
   deleteProduct: (id: string) => void;
@@ -28,16 +28,20 @@ interface StoreState {
   fetchCategories: () => Promise<void>;
   fetchProduct: (productId: number) => Promise<UIProduct | null>;
   searchProducts: (query: string) => Promise<UIProduct[]>;
+  updateProductAPI: (productId: number, productData: any) => Promise<void>;
+  deleteProductAPI: (productId: number) => Promise<void>;
 
   // Cart
   cart: CartItem[];
-  addToCart: (product: UIProduct, quantity?: number) => void;
+  addToCart: (product: UIProduct, quantity?: number, personalizationDetails?: any, extraPrice?: number) => void;
   removeFromCart: (productId: string) => void;
   updateCartQuantity: (productId: string, quantity: number) => void;
   clearCart: () => void;
   getCartTotal: () => number;
   syncCartWithBackend: () => Promise<void>;
   forceSyncCart: () => Promise<void>;
+  resetCartCompletely: () => void;
+  forceClearCartState: () => void;
 
   // Orders
   orders: Order[];
@@ -51,6 +55,28 @@ interface StoreState {
     cvv?: string;
   }) => Promise<string>;
 
+  // Dashboard data
+  dashboardStats: any;
+  recentOrders: any[];
+  topProducts: any[];
+  allOrders: any[];
+  ordersTotalPages: number;
+  ordersCurrentPage: number;
+  
+  // Dashboard methods
+  fetchDashboardStats: () => Promise<void>;
+  fetchRecentOrders: (limit?: number) => Promise<void>;
+  fetchTopProducts: (limit?: number) => Promise<void>;
+  fetchAllOrders: (page?: number, size?: number) => Promise<void>;
+  updateOrderStatusAPI: (orderId: number, status: string) => Promise<void>;
+
+  // POS
+  posCart: CartItem[];
+  addToPosCart: (product: UIProduct, quantity?: number) => void;
+  removeFromPosCart: (productId: string) => void;
+  updatePosCartQuantity: (productId: string, quantity: number) => void;
+  clearPosCart: () => void;
+  getPosCartTotal: () => number;
 }
 
 // Mock data for fallback
@@ -80,7 +106,7 @@ export const useStore = create<StoreState>()(
       },
       register: async (name: string, email: string, password: string) => {
         try {
-          const response = await apiClient.register({ username: name, email, password });
+          const response = await apiClient.register({ name, email, password });
           const userRole = response.role.toLowerCase() as 'customer' | 'admin' | 'cashier';
           set({ 
             currentUser: userRole, 
@@ -196,30 +222,72 @@ export const useStore = create<StoreState>()(
         }
       },
 
+      updateProductAPI: async (productId, productData) => {
+        try {
+          console.log('🔄 Updating product:', productId, productData);
+          const result = await apiClient.updateProduct(productId, productData);
+          console.log('✅ Product updated successfully:', result);
+          // Refresh the products list
+          await get().fetchProducts();
+        } catch (error) {
+          console.error('Failed to update product:', error);
+          throw error;
+        }
+      },
+
+      deleteProductAPI: async (productId) => {
+        try {
+          console.log('🔄 Deleting product:', productId);
+          await apiClient.deleteProduct(productId);
+          console.log('✅ Product deleted successfully');
+          // Refresh the products list
+          await get().fetchProducts();
+        } catch (error) {
+          console.error('Failed to delete product:', error);
+          throw error;
+        }
+      },
+
       // Cart
       cart: [],
-      addToCart: async (product, quantity = 1) => {
+      addToCart: async (product, quantity = 1, personalizationDetails = null, extraPrice = 0) => {
         const { currentUser } = get();
-        console.log('🔄 addToCart called:', { productId: product.id, quantity, currentUser });
+        console.log('🔄 addToCart called:', { productId: product.id, quantity, currentUser, personalizationDetails, extraPrice });
+        
+        const cartItem: CartItem = {
+          ...product,
+          quantity,
+          personalizationDetails,
+          extraPrice,
+          totalPrice: (product.price + extraPrice) * quantity
+        };
         
         if (currentUser) {
           try {
-            await apiClient.addToCart(parseInt(product.id), quantity);
+            await apiClient.addToCart(parseInt(product.id), quantity, personalizationDetails);
             // Instead of syncing, just add the item to local cart
             // This prevents fetching old cart items
             set((state) => {
-              const existingItem = state.cart.find(item => item.id === product.id);
+              const existingItem = state.cart.find(item => 
+                item.id === product.id && 
+                JSON.stringify(item.personalizationDetails) === JSON.stringify(personalizationDetails)
+              );
               if (existingItem) {
                 return {
                   cart: state.cart.map(item =>
-                    item.id === product.id
-                      ? { ...item, quantity: item.quantity + quantity }
+                    item.id === product.id && 
+                    JSON.stringify(item.personalizationDetails) === JSON.stringify(personalizationDetails)
+                      ? { 
+                          ...item, 
+                          quantity: item.quantity + quantity,
+                          totalPrice: (item.price + (item.extraPrice || 0)) * (item.quantity + quantity)
+                        }
                       : item
                   )
                 };
               } else {
                 return {
-                  cart: [...state.cart, { ...product, quantity }]
+                  cart: [...state.cart, cartItem]
                 };
               }
             });
@@ -228,18 +296,26 @@ export const useStore = create<StoreState>()(
             console.error('Failed to add to cart:', error);
             // Fallback to local cart if API fails
             set((state) => {
-              const existingItem = state.cart.find(item => item.id === product.id);
+              const existingItem = state.cart.find(item => 
+                item.id === product.id && 
+                JSON.stringify(item.personalizationDetails) === JSON.stringify(personalizationDetails)
+              );
               if (existingItem) {
                 return {
                   cart: state.cart.map(item =>
-                    item.id === product.id
-                      ? { ...item, quantity: item.quantity + quantity }
+                    item.id === product.id && 
+                    JSON.stringify(item.personalizationDetails) === JSON.stringify(personalizationDetails)
+                      ? { 
+                          ...item, 
+                          quantity: item.quantity + quantity,
+                          totalPrice: (item.price + (item.extraPrice || 0)) * (item.quantity + quantity)
+                        }
                       : item
                   )
                 };
               } else {
                 return {
-                  cart: [...state.cart, { ...product, quantity }]
+                  cart: [...state.cart, cartItem]
                 };
               }
             });
@@ -248,18 +324,26 @@ export const useStore = create<StoreState>()(
           console.log('🔄 User not authenticated, adding to local cart');
           // Local cart for non-authenticated users
           set((state) => {
-            const existingItem = state.cart.find(item => item.id === product.id);
+            const existingItem = state.cart.find(item => 
+              item.id === product.id && 
+              JSON.stringify(item.personalizationDetails) === JSON.stringify(personalizationDetails)
+            );
             if (existingItem) {
               return {
                 cart: state.cart.map(item =>
-                  item.id === product.id
-                    ? { ...item, quantity: item.quantity + quantity }
+                  item.id === product.id && 
+                  JSON.stringify(item.personalizationDetails) === JSON.stringify(personalizationDetails)
+                    ? { 
+                        ...item, 
+                        quantity: item.quantity + quantity,
+                        totalPrice: (item.price + (item.extraPrice || 0)) * (item.quantity + quantity)
+                      }
                     : item
                 )
               };
             } else {
               return {
-                cart: [...state.cart, { ...product, quantity }]
+                cart: [...state.cart, cartItem]
               };
             }
           });
@@ -277,7 +361,7 @@ export const useStore = create<StoreState>()(
             
             if (cartItem && 'backendId' in cartItem && cartItem.backendId) {
               console.log('🔄 Using backend ID for removal:', cartItem.backendId);
-              await apiClient.removeFromCart(cartItem.backendId);
+              await apiClient.removeFromCart((cartItem as any).backendId);
               // Remove from local cart instead of syncing
               set((state) => ({
                 cart: state.cart.filter(item => item.id !== productId)
@@ -316,7 +400,7 @@ export const useStore = create<StoreState>()(
             
             if (cartItem && 'backendId' in cartItem && cartItem.backendId) {
               console.log('🔄 Using backend ID for update:', cartItem.backendId);
-              await apiClient.updateCartItem(cartItem.backendId, quantity);
+              await apiClient.updateCartItem((cartItem as any).backendId, quantity);
               // Update local cart instead of syncing
               set((state) => ({
                 cart: quantity <= 0 
@@ -374,6 +458,21 @@ export const useStore = create<StoreState>()(
         }
         // Always clear the local cart regardless of authentication status
         set({ cart: [] });
+        
+        // Force clear from localStorage as well
+        try {
+          const storageKey = 'useStore';
+          const stored = localStorage.getItem(storageKey);
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            parsed.state.cart = [];
+            localStorage.setItem(storageKey, JSON.stringify(parsed));
+            console.log('✅ Cart cleared from localStorage');
+          }
+        } catch (error) {
+          console.error('Failed to clear cart from localStorage:', error);
+        }
+        
         console.log('✅ Local cart cleared, new cart length:', get().cart.length);
       },
       createNewCart: async () => {
@@ -382,6 +481,9 @@ export const useStore = create<StoreState>()(
         
         // Clear the current cart completely
         await get().clearCart();
+        
+        // Also call resetCartCompletely to ensure localStorage is cleared
+        get().resetCartCompletely();
         
         if (currentUser) {
           try {
@@ -398,9 +500,55 @@ export const useStore = create<StoreState>()(
         
         console.log('✅ New cart created successfully');
       },
+      resetCartCompletely: () => {
+        console.log('🔄 resetCartCompletely called');
+        
+        // Clear local state
+        set({ cart: [] });
+        
+        // Clear from localStorage
+        try {
+          const storageKey = 'useStore';
+          const stored = localStorage.getItem(storageKey);
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            parsed.state.cart = [];
+            localStorage.setItem(storageKey, JSON.stringify(parsed));
+            console.log('✅ Cart completely reset from localStorage');
+          }
+        } catch (error) {
+          console.error('Failed to reset cart from localStorage:', error);
+        }
+        
+        console.log('✅ Cart completely reset');
+      },
+      forceClearCartState: () => {
+        console.log('🔄 forceClearCartState called');
+        
+        // Force clear cart state immediately
+        set({ cart: [] });
+        
+        // Clear from localStorage
+        try {
+          const storageKey = 'useStore';
+          const stored = localStorage.getItem(storageKey);
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            parsed.state.cart = [];
+            localStorage.setItem(storageKey, JSON.stringify(parsed));
+            console.log('✅ Cart state force cleared');
+          }
+        } catch (error) {
+          console.error('Failed to force clear cart state:', error);
+        }
+      },
       getCartTotal: () => {
         const { cart } = get();
-        return cart.reduce((total, item) => total + (item.price * item.quantity), 0);
+        return cart.reduce((total, item) => {
+          const basePrice = item.price * item.quantity;
+          const extraPrice = (item.extraPrice || 0) * item.quantity;
+          return total + basePrice + extraPrice;
+        }, 0);
       },
       syncCartWithBackend: async () => {
         const { currentUser } = get();
@@ -418,16 +566,18 @@ export const useStore = create<StoreState>()(
           const frontendCart: CartItem[] = backendCart.map(item => ({
             id: item.productId.toString(),
             name: item.productName,
-            description: 'Product from cart',
             price: item.productPrice,
             quantity: item.quantity,
-            image: '/placeholder.svg', // You might want to fetch this from products
+            image: item.imageUrl || '/placeholder.svg',
             category: 'Unknown',
             size: 'Medium',
             stock: 999,
             rating: 0,
             reviews: 0,
-            backendId: item.id // Use id from backend response
+            backendId: item.itemId, // Use itemId from backend response
+            personalizationDetails: item.personalizationDetails,
+            extraPrice: item.extraPrice || 0,
+            totalPrice: item.itemTotal
           }));
           
           console.log('🔄 Converted frontend cart:', frontendCart);
@@ -453,16 +603,18 @@ export const useStore = create<StoreState>()(
           const frontendCart: CartItem[] = backendCart.map(item => ({
             id: item.productId.toString(),
             name: item.productName,
-            description: 'Product from cart',
             price: item.productPrice,
             quantity: item.quantity,
-            image: '/placeholder.svg', // You might want to fetch this from products
+            image: item.imageUrl || '/placeholder.svg',
             category: 'Unknown',
             size: 'Medium',
             stock: 999,
             rating: 0,
             reviews: 0,
-            backendId: item.id // Use id from backend response
+            backendId: item.itemId, // Use itemId from backend response
+            personalizationDetails: item.personalizationDetails,
+            extraPrice: item.extraPrice || 0,
+            totalPrice: item.itemTotal
           }));
           
           console.log('🔄 Converted frontend cart:', frontendCart);
@@ -490,8 +642,9 @@ export const useStore = create<StoreState>()(
         expiryYear?: string;
         cvv?: string;
       }) => {
-        const { currentUser } = get();
-        console.log('🔄 checkout called:', { currentUser, deliveryAddress, contactNumber, paymentMethod });
+        const { currentUser, userInfo } = get();
+        console.log('🔄 checkout called:', { currentUser, userInfo, deliveryAddress, contactNumber, paymentMethod });
+        console.log('🔄 Auth token in localStorage:', localStorage.getItem('auth_token'));
         
         if (!currentUser) {
           throw new Error('You must be logged in to place an order');
@@ -504,8 +657,8 @@ export const useStore = create<StoreState>()(
             paymentMethod,
             ...cardDetails
           });
-          // Clear cart after successful checkout
-          await get().clearCart();
+          // Don't create new cart here - let the checkout page handle clearing
+          // await get().createNewCart();
           
           // Ensure result is a string
           return typeof result === 'string' ? result : 'Order placed successfully';
@@ -515,6 +668,109 @@ export const useStore = create<StoreState>()(
         }
       },
 
+      // Dashboard data
+      dashboardStats: null,
+      recentOrders: [],
+      topProducts: [],
+      allOrders: [],
+      ordersTotalPages: 0,
+      ordersCurrentPage: 0,
+
+      // Dashboard methods
+      fetchDashboardStats: async () => {
+        try {
+          console.log('🔄 Fetching dashboard stats...');
+          const stats = await apiClient.getDashboardStats();
+          console.log('✅ Dashboard stats received:', stats);
+          set({ dashboardStats: stats });
+        } catch (error) {
+          console.error('❌ Failed to fetch dashboard stats:', error);
+        }
+      },
+
+      fetchRecentOrders: async (limit = 10) => {
+        try {
+          console.log('🔄 Fetching recent orders...');
+          const orders = await apiClient.getRecentOrders(limit);
+          console.log('✅ Recent orders received:', orders);
+          set({ recentOrders: orders });
+        } catch (error) {
+          console.error('❌ Failed to fetch recent orders:', error);
+        }
+      },
+
+      fetchTopProducts: async (limit = 10) => {
+        try {
+          console.log('🔄 Fetching top products...');
+          const products = await apiClient.getTopSellingProducts(limit);
+          console.log('✅ Top products received:', products);
+          set({ topProducts: products });
+        } catch (error) {
+          console.error('❌ Failed to fetch top products:', error);
+        }
+      },
+
+      fetchAllOrders: async (page = 0, size = 10) => {
+        try {
+          console.log('🔄 Fetching all orders...', { page, size });
+          const response = await apiClient.getAllOrders(page, size);
+          console.log('✅ All orders received:', response);
+          set({ 
+            allOrders: response.content,
+            ordersTotalPages: response.totalPages,
+            ordersCurrentPage: response.number
+          });
+        } catch (error) {
+          console.error('❌ Failed to fetch all orders:', error);
+        }
+      },
+
+      updateOrderStatusAPI: async (orderId, status) => {
+        try {
+          console.log('🔄 Updating order status:', { orderId, status });
+          await apiClient.updateOrderStatus(orderId, status);
+          console.log('✅ Order status updated successfully');
+          // Refresh orders after update
+          await get().fetchAllOrders();
+        } catch (error) {
+          console.error('❌ Failed to update order status:', error);
+          throw error;
+        }
+      },
+
+      // POS
+      posCart: [],
+      addToPosCart: (product, quantity = 1) => set((state) => {
+        const existingItem = state.posCart.find(item => item.id === product.id);
+        if (existingItem) {
+          return {
+            posCart: state.posCart.map(item =>
+              item.id === product.id
+                ? { ...item, quantity: item.quantity + quantity }
+                : item
+            )
+          };
+        } else {
+          return {
+            posCart: [...state.posCart, { ...product, quantity }]
+          };
+        }
+      }),
+      removeFromPosCart: (productId) => set((state) => ({
+        posCart: state.posCart.filter(item => item.id !== productId)
+      })),
+      updatePosCartQuantity: (productId, quantity) => set((state) => ({
+        posCart: quantity <= 0 
+          ? state.posCart.filter(item => item.id !== productId)
+          : state.posCart.map(item =>
+              item.id === productId ? { ...item, quantity } : item
+            )
+      })),
+      clearPosCart: () => set({ posCart: [] }),
+      getPosCartTotal: () => {
+        const { posCart } = get();
+        return posCart.reduce((total, item) => total + (item.price * item.quantity), 0);
+      },
     }),
     {
       name: 'teddylove-store',

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
   Plus,
   Package,
@@ -34,17 +35,40 @@ export function AdminDashboard() {
     setCurrentUser,
     fetchProducts,
     fetchCategories,
+    logout,
+    // Dashboard data
+    dashboardStats,
+    recentOrders,
+    topProducts,
+    allOrders,
+    ordersTotalPages,
+    ordersCurrentPage,
+    // Dashboard methods
+    fetchDashboardStats,
+    fetchRecentOrders,
+    fetchTopProducts,
+    fetchAllOrders,
+    updateOrderStatusAPI,
   } = useStore();
   const [selectedTab, setSelectedTab] = useState<
     "overview" | "products" | "orders"
   >("overview");
   const [isLoading, setIsLoading] = useState(true);
+  const [expandedOrderId, setExpandedOrderId] = useState<number | null>(null);
+  const navigate = useNavigate();
 
   // Load data on component mount
   useEffect(() => {
     const loadData = async () => {
       try {
-        await Promise.all([fetchProducts(), fetchCategories()]);
+        await Promise.all([
+          fetchProducts(),
+          fetchCategories(),
+          fetchDashboardStats(),
+          fetchRecentOrders(10),
+          fetchTopProducts(10),
+          fetchAllOrders(0, 10),
+        ]);
       } catch (error) {
         console.error("Failed to load admin data:", error);
       } finally {
@@ -52,11 +76,25 @@ export function AdminDashboard() {
       }
     };
     loadData();
-  }, [fetchProducts, fetchCategories]);
+  }, [
+    fetchProducts,
+    fetchCategories,
+    fetchDashboardStats,
+    fetchRecentOrders,
+    fetchTopProducts,
+    fetchAllOrders,
+  ]);
 
-  // Calculate stats
-  const totalRevenue = orders.reduce((sum, order) => sum + order.total, 0);
-  const totalProducts = products.length;
+  const handleLogout = () => {
+    logout(); // clear store / token
+    navigate("/auth"); // redirect after logout
+  };
+
+  // Calculate stats from dashboard data or fallback to local calculation
+  const totalRevenue =
+    dashboardStats?.totalRevenue ||
+    orders.reduce((sum, order) => sum + order.total, 0);
+  const totalProducts = dashboardStats?.totalProducts || products.length;
   const lowStockItems = products.filter((p) => p.stock <= 5 && p.stock > 0);
   const outOfStockItems = products.filter((p) => p.stock === 0);
 
@@ -74,13 +112,13 @@ export function AdminDashboard() {
           <div className="flex items-center space-x-4">
             <Button
               variant="ghost"
-              onClick={() => setCurrentUser("customer")}
+              onClick={handleLogout}
               className="flex items-center space-x-2"
             >
               <ArrowLeft className="h-4 w-4" />
-              <span>Back to Store</span>
+              <span>Log out</span>
             </Button>
-            <div className="h-6 w-px bg-border" />
+            {/* <div className="h-6 w-px bg-border" />
             <div className="flex items-center space-x-2">
               <Button
                 variant="ghost"
@@ -100,7 +138,7 @@ export function AdminDashboard() {
                 <ShoppingCart className="h-4 w-4" />
                 <span>POS System</span>
               </Button>
-            </div>
+            </div> */}
           </div>
         </div>
 
@@ -159,10 +197,15 @@ export function AdminDashboard() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
-                    ${totalRevenue.toFixed(2)}
+                    $
+                    {dashboardStats
+                      ? dashboardStats.totalRevenue.toFixed(2)
+                      : totalRevenue.toFixed(2)}
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    +12% from last month
+                    {dashboardStats
+                      ? `Today: $${dashboardStats.todayRevenue.toFixed(2)}`
+                      : "+12% from last month"}
                   </p>
                 </CardContent>
               </Card>
@@ -175,9 +218,15 @@ export function AdminDashboard() {
                   <Package className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{totalProducts}</div>
+                  <div className="text-2xl font-bold">
+                    {dashboardStats
+                      ? dashboardStats.totalProducts
+                      : totalProducts}
+                  </div>
                   <p className="text-xs text-muted-foreground">
-                    Active inventory
+                    {dashboardStats
+                      ? `Active: ${dashboardStats.activeProducts}`
+                      : "Active inventory"}
                   </p>
                 </CardContent>
               </Card>
@@ -191,10 +240,14 @@ export function AdminDashboard() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold text-destructive">
-                    {lowStockItems.length}
+                    {dashboardStats
+                      ? dashboardStats.lowStockProducts
+                      : lowStockItems.length}
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Items need restocking
+                    {dashboardStats
+                      ? `${dashboardStats.outOfStockProducts} out of stock`
+                      : `${outOfStockItems.length} out of stock`}
                   </p>
                 </CardContent>
               </Card>
@@ -207,9 +260,15 @@ export function AdminDashboard() {
                   <Users className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{orders.length}</div>
+                  <div className="text-2xl font-bold">
+                    {dashboardStats
+                      ? dashboardStats.totalOrders
+                      : orders.length}
+                  </div>
                   <p className="text-xs text-muted-foreground">
-                    All time orders
+                    {dashboardStats
+                      ? `Pending: ${dashboardStats.pendingOrders}`
+                      : "All time orders"}
                   </p>
                 </CardContent>
               </Card>
@@ -244,6 +303,50 @@ export function AdminDashboard() {
                         <Badge variant="destructive">
                           {product.stock} left
                         </Badge>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Recent Orders */}
+            {recentOrders && recentOrders.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Recent Orders</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {recentOrders.map((order) => (
+                      <div
+                        key={order.orderId}
+                        className="flex items-center justify-between p-3 border rounded-lg"
+                      >
+                        <div className="flex items-center space-x-3">
+                          <div>
+                            <p className="font-medium">
+                              Order #{order.orderId}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              {order.customerName}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-medium">
+                            ${order.totalPrice.toFixed(2)}
+                          </p>
+                          <Badge
+                            variant={
+                              order.status === "Delivered"
+                                ? "default"
+                                : "secondary"
+                            }
+                          >
+                            {order.status}
+                          </Badge>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -348,35 +451,133 @@ export function AdminDashboard() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {orders.map((order) => (
-                    <TableRow key={order.id}>
-                      <TableCell className="font-mono">
-                        #{order.id.slice(-8)}
-                      </TableCell>
-                      <TableCell>{order.customerName || "Guest"}</TableCell>
-                      <TableCell>{order.items.length} items</TableCell>
-                      <TableCell>${order.total.toFixed(2)}</TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={
-                            order.status === "delivered"
-                              ? "default"
-                              : order.status === "shipped"
-                              ? "secondary"
-                              : order.status === "processing"
-                              ? "outline"
-                              : "destructive"
+                  {allOrders && allOrders.length > 0 ? (
+                    allOrders.map((order) => (
+                      <>
+                        <TableRow
+                          key={order.orderId}
+                          className="cursor-pointer"
+                          onClick={() =>
+                            setExpandedOrderId(
+                              expandedOrderId === order.orderId
+                                ? null
+                                : order.orderId
+                            )
                           }
                         >
-                          {order.status.charAt(0).toUpperCase() +
-                            order.status.slice(1)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {new Date(order.createdAt).toLocaleDateString()}
+                          <TableCell className="font-mono">
+                            #{order.orderId}
+                          </TableCell>
+                          <TableCell>{order.customerName}</TableCell>
+                          <TableCell>
+                            {order.orderItems ? order.orderItems.length : 0}{" "}
+                            items
+                          </TableCell>
+                          <TableCell>
+                            $
+                            {order.totalPrice
+                              ? order.totalPrice.toFixed(2)
+                              : "0.00"}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={
+                                order.status === "Delivered"
+                                  ? "default"
+                                  : order.status === "Shipped"
+                                  ? "secondary"
+                                  : order.status === "Confirmed"
+                                  ? "outline"
+                                  : "destructive"
+                              }
+                            >
+                              {order.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {new Date(order.orderDate).toLocaleDateString()}
+                          </TableCell>
+                        </TableRow>
+                        {expandedOrderId === order.orderId && (
+                          <TableRow>
+                            <TableCell colSpan={6}>
+                              <div className="grid gap-4 md:grid-cols-2">
+                                <div className="space-y-2">
+                                  <p className="font-semibold">
+                                    Customer details
+                                  </p>
+                                  <div className="text-sm text-muted-foreground">
+                                    <div>Name: {order.customerName}</div>
+                                    {order.customerEmail && (
+                                      <div>Email: {order.customerEmail}</div>
+                                    )}
+                                    {order.contactNumber && (
+                                      <div>Contact: {order.contactNumber}</div>
+                                    )}
+                                    {order.deliveryAddress && (
+                                      <div>
+                                        Address: {order.deliveryAddress}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="space-y-2">
+                                  <p className="font-semibold">
+                                    Purchased items
+                                  </p>
+                                  <div className="space-y-1">
+                                    {order.orderItems &&
+                                    order.orderItems.length > 0 ? (
+                                      order.orderItems.map((item: any) => (
+                                        <div
+                                          key={item.itemId}
+                                          className="flex items-center justify-between text-sm border rounded-md p-2"
+                                        >
+                                          <div className="mr-4">
+                                            <div className="font-medium">
+                                              {item.productName}
+                                            </div>
+                                            {item.personalizationDetails && (
+                                              <div className="text-xs text-muted-foreground">
+                                                Personalized
+                                              </div>
+                                            )}
+                                          </div>
+                                          <div className="flex items-center gap-4">
+                                            <span>x{item.quantity}</span>
+                                            <span>
+                                              $
+                                              {(
+                                                item.itemTotal ||
+                                                item.price * item.quantity
+                                              ).toFixed(2)}
+                                            </span>
+                                          </div>
+                                        </div>
+                                      ))
+                                    ) : (
+                                      <div className="text-sm text-muted-foreground">
+                                        No items found
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell
+                        colSpan={6}
+                        className="text-center text-muted-foreground"
+                      >
+                        No orders found
                       </TableCell>
                     </TableRow>
-                  ))}
+                  )}
                 </TableBody>
               </Table>
             </CardContent>

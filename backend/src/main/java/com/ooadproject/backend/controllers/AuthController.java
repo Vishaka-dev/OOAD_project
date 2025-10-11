@@ -28,8 +28,7 @@ public class AuthController {
     public ResponseEntity<?> login(@Valid @RequestBody AuthRequestDTO request) {
         try {
             Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
-            );
+                    new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword()));
 
             User user = userService.findByUsername(request.getUsername())
                     .orElseThrow(() -> new RuntimeException("User not found"));
@@ -40,8 +39,7 @@ public class AuthController {
                     token,
                     user.getUsername(),
                     user.getEmail(),
-                    user.getRole().name()
-            );
+                    user.getRole().name());
 
             return ResponseEntity.ok(response);
         } catch (Exception e) {
@@ -59,8 +57,7 @@ public class AuthController {
                     token,
                     user.getUsername(),
                     user.getEmail(),
-                    user.getRole().name()
-            );
+                    user.getRole().name());
 
             return ResponseEntity.ok(response);
         } catch (Exception e) {

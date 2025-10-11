@@ -5,7 +5,7 @@ spring:
     allow-circular-references: true
 
   datasource:
-    url: jdbc:mysql://localhost:3306/store?createDatabaseIfNotExist=true
+    url: jdbc:mysql://localhost:3306/gift_pos?createDatabaseIfNotExist=true
     username: root
     password: pass123
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -13,21 +13,26 @@ spring:
   mail:
     host: smtp.gmail.com
     port: 587
-    username: your_gmail@gmail.com
-    password: your_app_password
+    username: m7zipza@gmail.com
+    password: wtfj cxfk lgau iucc
     properties:
       mail:
         smtp:
           auth: true
           starttls:
             enable: true
+          connectiontimeout: 5000
+          timeout: 3000
+          writetimeout: 5000
 
 server:
   port: 8081
 
 app:
   mail:
-    admin: admin@example.com
+    admin: m7zipza@gmail.com
+    from-name: "Gift Shop Team"
+    enabled: true
 
 jwt:
   secret: myVerySecretKeyForJWTTokenGeneration

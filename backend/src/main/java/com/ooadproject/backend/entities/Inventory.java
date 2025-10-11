@@ -1,10 +1,15 @@
 package com.ooadproject.backend.entities;
 
 import jakarta.persistence.*;
+import lombok.Data;
 import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
+import org.hibernate.annotations.UpdateTimestamp;
+import java.time.LocalDateTime;
 
+
+@Data
 @Entity
 @Table(name = "inventory")
 public class Inventory {
@@ -26,50 +31,16 @@ public class Inventory {
     @Column(name = "low_stock_threshold")
     private Integer lowStockThreshold;
 
-    // ---------- Constructors ----------
-    public Inventory() {
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
+    public boolean isLowStock() {
+        if (stockLevel == null || lowStockThreshold == null) return false;
+        return stockLevel > 0 && stockLevel <= lowStockThreshold;
     }
 
-    public Inventory(Integer productId,
-                     Product product,
-                     Integer stockLevel,
-                     Integer lowStockThreshold) {
-        this.productId = productId;
-        this.product = product;
-        this.stockLevel = stockLevel;
-        this.lowStockThreshold = lowStockThreshold;
-    }
-
-    // ---------- Getters & Setters ----------
-    public Integer getProductId() {
-        return productId;
-    }
-
-    public void setProductId(Integer productId) {
-        this.productId = productId;
-    }
-
-    public Product getProduct() {
-        return product;
-    }
-
-    public void setProduct(Product product) {
-        this.product = product;
-    }
-
-    public Integer getStockLevel() {
-        return stockLevel;
-    }
-
-    public void setStockLevel(Integer stockLevel) {
-        this.stockLevel = stockLevel;
-    }
-
-    public Integer getLowStockThreshold() {
-        return lowStockThreshold;
-    }
-
-    public void setLowStockThreshold(Integer lowStockThreshold) {
-        this.lowStockThreshold = lowStockThreshold;
+    public boolean isOutOfStock() {
+        return stockLevel != null && stockLevel == 0;
     }
 }
