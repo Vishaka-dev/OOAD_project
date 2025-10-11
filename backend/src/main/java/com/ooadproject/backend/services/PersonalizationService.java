@@ -1,6 +1,7 @@
 package com.ooadproject.backend.services;
 
 import com.ooadproject.backend.dto.AddPersonalizedToCartRequest;
+import com.ooadproject.backend.dto.PersonalizationDTO;
 import com.ooadproject.backend.dto.PersonalizationOptionDTO;
 import com.ooadproject.backend.entities.CartItem;
 import com.ooadproject.backend.entities.PersonalizationOption;
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -106,8 +108,32 @@ public class PersonalizationService {
         if (request.getMaxLength() != null)
             details.put("maxLength", request.getMaxLength());
 
+        // Convert to PersonalizationDTO for consistency with new system
+        PersonalizationDTO personalizationDTO = new PersonalizationDTO();
+        personalizationDTO.setCustomizationId(PersonalizationDTO.generateCustomizationId());
+
+        // Map old fields to new structure
+        if (request.getUsiType() != null) {
+            personalizationDTO.setOccasion(request.getUsiType());
+        }
+        if (request.getMassage() != null) {
+            personalizationDTO.setCustomMessage(request.getMassage());
+        }
+        if (request.getExtraPrice() != null) {
+            personalizationDTO.setExtraCost(request.getExtraPrice());
+        }
+
+        // Add any additional details to the personalization
+        if (request.getAdditionalDetails() != null) {
+            // Merge additional details into the personalization map
+            Map<String, Object> personalizationMap = personalizationDTO.toMap();
+            personalizationMap.putAll(request.getAdditionalDetails());
+            personalizationDTO = PersonalizationDTO.fromMap(personalizationMap);
+        }
+
         // Add to cart atomically using existing cart service
-        CartItem cartItem = cartService.addToCart(user, request.getProductId(), request.getQuantity(), details);
+        CartItem cartItem = cartService.addToCart(user, request.getProductId(), request.getQuantity(),
+                personalizationDTO);
         return cartItem;
     }
 }

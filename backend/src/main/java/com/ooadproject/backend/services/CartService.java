@@ -1,6 +1,7 @@
 package com.ooadproject.backend.services;
 
 import com.ooadproject.backend.dto.CartItemDTO;
+import com.ooadproject.backend.dto.PersonalizationDTO;
 import com.ooadproject.backend.entities.Cart;
 import com.ooadproject.backend.entities.CartItem;
 import com.ooadproject.backend.entities.Product;
@@ -28,7 +29,6 @@ public class CartService {
     private final CartRepository cartRepository;
     private final CartItemRepository cartItemRepository;
     private final ProductRepository productRepository;
-    private final UserRepository userRepository;
 
     // In-memory cart store for unauthenticated users (session-based)
     // Using static to persist across requests in stateless application
@@ -52,11 +52,11 @@ public class CartService {
 
     @Transactional
     public CartItem addToCart(User user, Integer productId, Integer quantity,
-            Map<String, Object> personalizationDetails) {
+            PersonalizationDTO personalizationDTO) {
         if (user == null) {
             // For unauthenticated users, use a default session ID
             String sessionId = "anonymous";
-            return addToSessionCart(sessionId, productId, quantity, personalizationDetails);
+            return addToSessionCart(sessionId, productId, quantity, personalizationDTO);
         }
 
         Cart cart = getOrCreateCart(user);
@@ -69,23 +69,35 @@ public class CartService {
 
         Optional<CartItem> existingItem = cartItemRepository.findByCartAndProduct(cart, product);
 
+        // Convert PersonalizationDTO to Map for JSON storage
+        Map<String, Object> personalizationMap = null;
+        if (personalizationDTO != null) {
+            // Generate customization ID if not provided
+            if (personalizationDTO.getCustomizationId() == null) {
+                personalizationDTO.setCustomizationId(PersonalizationDTO.generateCustomizationId());
+            }
+            // Calculate and set extra cost
+            personalizationDTO.setExtraCost(personalizationDTO.calculateExtraCost());
+            personalizationMap = personalizationDTO.toMap();
+        }
+
         if (existingItem.isPresent()) {
             CartItem item = existingItem.get();
             item.setQuantity(item.getQuantity() + quantity);
-            item.setPersonalizationDetails(personalizationDetails);
+            item.setPersonalizationDetails(personalizationMap);
             return cartItemRepository.save(item);
         } else {
             CartItem newItem = new CartItem();
             newItem.setCart(cart);
             newItem.setProduct(product);
             newItem.setQuantity(quantity);
-            newItem.setPersonalizationDetails(personalizationDetails);
+            newItem.setPersonalizationDetails(personalizationMap);
             return cartItemRepository.save(newItem);
         }
     }
 
     private CartItem addToSessionCart(String sessionId, Integer productId, Integer quantity,
-            Map<String, Object> personalizationDetails) {
+            PersonalizationDTO personalizationDTO) {
         System.out.println("🔄 Adding to session cart: sessionId=" + sessionId + ", productId=" + productId
                 + ", quantity=" + quantity);
 
@@ -99,6 +111,18 @@ public class CartService {
         List<CartItemDTO> cartItems = sessionCarts.computeIfAbsent(sessionId, k -> new ArrayList<>());
         System.out.println("🔄 Current cart items count: " + cartItems.size());
 
+        // Convert PersonalizationDTO to Map for JSON storage
+        Map<String, Object> personalizationMap = null;
+        if (personalizationDTO != null) {
+            // Generate customization ID if not provided
+            if (personalizationDTO.getCustomizationId() == null) {
+                personalizationDTO.setCustomizationId(PersonalizationDTO.generateCustomizationId());
+            }
+            // Calculate and set extra cost
+            personalizationDTO.setExtraCost(personalizationDTO.calculateExtraCost());
+            personalizationMap = personalizationDTO.toMap();
+        }
+
         // Check if item already exists
         Optional<CartItemDTO> existingItem = cartItems.stream()
                 .filter(item -> item.getProductId().equals(productId))
@@ -107,10 +131,10 @@ public class CartService {
         if (existingItem.isPresent()) {
             CartItemDTO item = existingItem.get();
             item.setQuantity(item.getQuantity() + quantity);
-            item.setPersonalizationDetails(personalizationDetails);
+            item.setPersonalizationDetails(personalizationMap);
 
             // Calculate extra price and total
-            BigDecimal extraPrice = calculateExtraPrice(personalizationDetails);
+            BigDecimal extraPrice = calculateExtraPrice(personalizationMap);
             item.setExtraPrice(extraPrice);
             BigDecimal baseTotal = product.getPrice().multiply(BigDecimal.valueOf(item.getQuantity()));
             BigDecimal extraTotal = extraPrice.multiply(BigDecimal.valueOf(item.getQuantity()));
@@ -125,10 +149,10 @@ public class CartService {
             newItem.setProductPrice(product.getPrice());
             newItem.setImageUrl(product.getImageUrl());
             newItem.setQuantity(quantity);
-            newItem.setPersonalizationDetails(personalizationDetails);
+            newItem.setPersonalizationDetails(personalizationMap);
 
             // Calculate extra price and total
-            BigDecimal extraPrice = calculateExtraPrice(personalizationDetails);
+            BigDecimal extraPrice = calculateExtraPrice(personalizationMap);
             newItem.setExtraPrice(extraPrice);
             BigDecimal baseTotal = product.getPrice().multiply(BigDecimal.valueOf(quantity));
             BigDecimal extraTotal = extraPrice.multiply(BigDecimal.valueOf(quantity));
@@ -155,7 +179,6 @@ public class CartService {
             return;
         }
 
-        Cart cart = getOrCreateCart(user);
         CartItem item = cartItemRepository.findById(itemId)
                 .orElseThrow(() -> new RuntimeException("Cart item not found"));
 
@@ -205,7 +228,6 @@ public class CartService {
             return;
         }
 
-        Cart cart = getOrCreateCart(user);
         CartItem item = cartItemRepository.findById(itemId)
                 .orElseThrow(() -> new RuntimeException("Cart item not found"));
 
@@ -306,6 +328,13 @@ public class CartService {
             return BigDecimal.ZERO;
         }
 
+        // Use the PersonalizationDTO calculation method for consistency
+        PersonalizationDTO dto = PersonalizationDTO.fromMap(personalizationDetails);
+        if (dto != null) {
+            return dto.calculateExtraCost();
+        }
+
+        // Fallback to direct calculation if DTO conversion fails
         BigDecimal extraPrice = BigDecimal.ZERO;
 
         // Occasion pricing
@@ -319,40 +348,40 @@ public class CartService {
             }
         }
 
-        // Flowers count pricing
-        String flowersCount = (String) personalizationDetails.get("flowersCount");
-        if (flowersCount != null) {
-            try {
-                int count = Integer.parseInt(flowersCount);
-                extraPrice = extraPrice.add(BigDecimal.valueOf(count));
-            } catch (NumberFormatException e) {
-                // Handle non-numeric values
-                switch (flowersCount) {
-                    case "3" -> extraPrice = extraPrice.add(BigDecimal.valueOf(3));
-                    case "5" -> extraPrice = extraPrice.add(BigDecimal.valueOf(5));
-                    case "7" -> extraPrice = extraPrice.add(BigDecimal.valueOf(7));
-                    case "9" -> extraPrice = extraPrice.add(BigDecimal.valueOf(9));
-                    case "12" -> extraPrice = extraPrice.add(BigDecimal.valueOf(12));
+        // Teddy pricing - check nested teddy object
+        Object teddyObj = personalizationDetails.get("teddy");
+        if (teddyObj instanceof Map) {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> teddyMap = (Map<String, Object>) teddyObj;
+
+            Boolean included = (Boolean) teddyMap.get("included");
+            if (Boolean.TRUE.equals(included)) {
+                extraPrice = extraPrice.add(BigDecimal.valueOf(15));
+
+                String teddyType = (String) teddyMap.get("type");
+                if (teddyType != null) {
+                    switch (teddyType) {
+                        case "handmade" -> extraPrice = extraPrice.add(BigDecimal.valueOf(5));
+                        case "fluffy" -> extraPrice = extraPrice.add(BigDecimal.valueOf(10));
+                    }
                 }
             }
         }
 
-        // Teddy pricing
-        String teddy = (String) personalizationDetails.get("teddy");
-        if ("With".equals(teddy)) {
-            extraPrice = extraPrice.add(BigDecimal.valueOf(15));
-        }
+        // Flowers pricing - check nested flowers object
+        Object flowersObj = personalizationDetails.get("flowers");
+        if (flowersObj instanceof Map) {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> flowersMap = (Map<String, Object>) flowersObj;
 
-        String teddyType = (String) personalizationDetails.get("teddyType");
-        if (teddyType != null) {
-            switch (teddyType) {
-                case "handmade" -> extraPrice = extraPrice.add(BigDecimal.valueOf(5));
-                case "fluffy" -> extraPrice = extraPrice.add(BigDecimal.valueOf(10));
+            Object countObj = flowersMap.get("count");
+            if (countObj instanceof Number) {
+                extraPrice = extraPrice.add(BigDecimal.valueOf(((Number) countObj).intValue()));
             }
         }
 
         // Wrapping paper pricing
-        String wrappingPaper = (String) personalizationDetails.get("wrappingPaper");
+        String wrappingPaper = (String) personalizationDetails.get("wrapping_paper");
         if (wrappingPaper != null) {
             switch (wrappingPaper) {
                 case "Premium" -> extraPrice = extraPrice.add(BigDecimal.valueOf(3));
@@ -361,13 +390,13 @@ public class CartService {
         }
 
         // Soft toys pricing
-        String softToys = (String) personalizationDetails.get("softToys");
+        String softToys = (String) personalizationDetails.get("soft_toys");
         if ("Yes".equals(softToys)) {
             extraPrice = extraPrice.add(BigDecimal.valueOf(8));
         }
 
         // Custom felt design pricing
-        String feltDesign = (String) personalizationDetails.get("feltDesign");
+        String feltDesign = (String) personalizationDetails.get("felt_design");
         if (feltDesign != null && !feltDesign.trim().isEmpty()) {
             extraPrice = extraPrice.add(BigDecimal.valueOf(5));
         }

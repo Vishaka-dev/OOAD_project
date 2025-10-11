@@ -42,5 +42,6 @@ public class OrderItem {
     private BigDecimal price;
 
     @JdbcTypeCode(SqlTypes.JSON)
+    @Column(columnDefinition = "JSON")
     private Map<String, Object> personalizationDetails;
 }

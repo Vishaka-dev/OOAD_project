@@ -33,12 +33,15 @@ export interface AuthResponse {
 }
 
 export interface CartItemDTO {
-  id: number;
+  itemId: number;
   productId: number;
   productName: string;
   productPrice: number;
+  imageUrl?: string;
   quantity: number;
   personalizationDetails?: Record<string, unknown>;
+  extraPrice?: number;
+  itemTotal?: number;
 }
 
 export interface CheckoutRequest {
@@ -249,6 +252,20 @@ class ApiClient {
     await this.request(`/cart/add?${params}`, {
       method: 'POST',
       body: personalizationDetails ? JSON.stringify(personalizationDetails) : undefined,
+    });
+  }
+
+  // New method for adding to cart with structured personalization
+  async addToCartWithPersonalization(productId: number, quantity: number, personalization?: Record<string, unknown>): Promise<void> {
+    const requestBody = {
+      productId,
+      quantity,
+      personalization
+    };
+
+    await this.request('/cart/add-with-personalization', {
+      method: 'POST',
+      body: JSON.stringify(requestBody),
     });
   }
 

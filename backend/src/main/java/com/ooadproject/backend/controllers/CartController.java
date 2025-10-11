@@ -1,6 +1,8 @@
 package com.ooadproject.backend.controllers;
 
+import com.ooadproject.backend.dto.AddToCartRequest;
 import com.ooadproject.backend.dto.CartItemDTO;
+import com.ooadproject.backend.dto.PersonalizationDTO;
 import com.ooadproject.backend.entities.User;
 import com.ooadproject.backend.services.CartService;
 import com.ooadproject.backend.services.UserService;
@@ -67,7 +69,7 @@ public class CartController {
     public ResponseEntity<?> addToCart(
             @RequestParam Integer productId,
             @RequestParam Integer quantity,
-            @RequestBody(required = false) Map<String, Object> personalizationDetails,
+            @RequestBody(required = false) PersonalizationDTO personalizationDTO,
             Authentication authentication) {
         try {
             User user = null;
@@ -79,7 +81,25 @@ public class CartController {
             // In a real app, you might want to use session-based cart or require
             // authentication
 
-            cartService.addToCart(user, productId, quantity, personalizationDetails);
+            cartService.addToCart(user, productId, quantity, personalizationDTO);
+            return ResponseEntity.ok(Map.of("message", "Item added to cart successfully"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/add-with-personalization")
+    public ResponseEntity<?> addToCartWithPersonalization(
+            @RequestBody AddToCartRequest request,
+            Authentication authentication) {
+        try {
+            User user = null;
+            if (authentication != null) {
+                user = userService.findByUsername(authentication.getName())
+                        .orElseThrow(() -> new RuntimeException("User not found"));
+            }
+
+            cartService.addToCart(user, request.getProductId(), request.getQuantity(), request.getPersonalization());
             return ResponseEntity.ok(Map.of("message", "Item added to cart successfully"));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));

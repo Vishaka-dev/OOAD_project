@@ -1,8 +1,9 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { Product, UIProduct, CartItem, Order, Category, ProductFilterParams } from '@/types/product';
+import { Product, UIProduct, CartItem, Order, Category, ProductFilterParams, PersonalizationDetails } from '@/types/product';
 import { apiClient, AuthResponse } from '@/lib/api';
 import { convertProductToUI, convertProductsToUI, convertCategoriesToUI, generateMockProducts, generateMockCategories } from '@/lib/product-utils';
+import { convertToNewFormat, calculateExtraCost } from '@/lib/personalization-utils';
 
 interface StoreState {
   // Authentication
@@ -254,29 +255,49 @@ export const useStore = create<StoreState>()(
         const { currentUser } = get();
         console.log('🔄 addToCart called:', { productId: product.id, quantity, currentUser, personalizationDetails, extraPrice });
         
+        // Ensure personalization details are in the new format
+        let normalizedPersonalizationDetails = personalizationDetails;
+        if (personalizationDetails && Object.keys(personalizationDetails).length > 0) {
+          // Check if it's in legacy format and convert if needed
+          if (!personalizationDetails.customization_id && !personalizationDetails.teddy?.included) {
+            normalizedPersonalizationDetails = convertToNewFormat(personalizationDetails);
+            extraPrice = calculateExtraCost(normalizedPersonalizationDetails);
+          }
+        }
+        
         const cartItem: CartItem = {
           ...product,
           quantity,
-          personalizationDetails,
+          personalizationDetails: normalizedPersonalizationDetails,
           extraPrice,
           totalPrice: (product.price + extraPrice) * quantity
         };
         
         if (currentUser) {
           try {
-            await apiClient.addToCart(parseInt(product.id), quantity, personalizationDetails);
+            // Use the new API method if personalization details are provided
+            if (normalizedPersonalizationDetails && Object.keys(normalizedPersonalizationDetails).length > 0) {
+              await apiClient.addToCartWithPersonalization(
+                parseInt(product.id), 
+                quantity, 
+                normalizedPersonalizationDetails
+              );
+            } else {
+              await apiClient.addToCart(parseInt(product.id), quantity, normalizedPersonalizationDetails);
+            }
+            
             // Instead of syncing, just add the item to local cart
             // This prevents fetching old cart items
             set((state) => {
               const existingItem = state.cart.find(item => 
                 item.id === product.id && 
-                JSON.stringify(item.personalizationDetails) === JSON.stringify(personalizationDetails)
+                JSON.stringify(item.personalizationDetails) === JSON.stringify(normalizedPersonalizationDetails)
               );
               if (existingItem) {
                 return {
                   cart: state.cart.map(item =>
                     item.id === product.id && 
-                    JSON.stringify(item.personalizationDetails) === JSON.stringify(personalizationDetails)
+                    JSON.stringify(item.personalizationDetails) === JSON.stringify(normalizedPersonalizationDetails)
                       ? { 
                           ...item, 
                           quantity: item.quantity + quantity,

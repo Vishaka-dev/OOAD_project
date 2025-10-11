@@ -55,11 +55,31 @@ public class CheckoutService {
             oi.setProduct(ci.getProduct());
             oi.setQuantity(ci.getQuantity());
 
-            // FIXED: Use BigDecimal for price calculations
-            BigDecimal lineTotal = ci.getProduct().getPrice().multiply(BigDecimal.valueOf(ci.getQuantity()));
-            oi.setPrice(ci.getProduct().getPrice()); // Store unit price, not line total
+            // Copy personalization JSON from cart item to order item
             oi.setPersonalizationDetails(ci.getPersonalizationDetails());
+
+            // Calculate price including personalization extra cost
+            BigDecimal basePrice = ci.getProduct().getPrice();
+            BigDecimal extraCost = BigDecimal.ZERO;
+
+            if (ci.getPersonalizationDetails() != null) {
+                // Extract extra cost from personalization details
+                Object extraCostObj = ci.getPersonalizationDetails().get("extra_cost");
+                if (extraCostObj instanceof BigDecimal) {
+                    extraCost = (BigDecimal) extraCostObj;
+                } else if (extraCostObj instanceof Number) {
+                    extraCost = BigDecimal.valueOf(((Number) extraCostObj).doubleValue());
+                }
+            }
+
+            // Store unit price including personalization cost
+            BigDecimal unitPrice = basePrice.add(extraCost);
+            oi.setPrice(unitPrice);
+
+            // Calculate line total for order total
+            BigDecimal lineTotal = unitPrice.multiply(BigDecimal.valueOf(ci.getQuantity()));
             total = total.add(lineTotal);
+
             orderItemRepository.save(oi);
         }
 

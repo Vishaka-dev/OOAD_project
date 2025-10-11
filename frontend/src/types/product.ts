@@ -42,15 +42,32 @@ export interface CartItem extends UIProduct {
   totalPrice?: number; // Total price including personalization extras
 }
 
+// New JSON structure for personalization (matches backend)
 export interface PersonalizationDetails {
+  customization_id?: string;
   occasion?: string;
+  teddy?: {
+    included?: boolean;
+    type?: string;
+    color?: string;
+  };
+  flowers?: {
+    count?: number;
+    color?: string;
+  };
+  wrapping_paper?: string;
+  soft_toys?: string;
+  felt_design?: string;
+  custom_message?: string;
+  extra_cost?: number;
+  
+  // Legacy fields for backward compatibility
   flowersCount?: string;
   flowersColor?: string;
   wrappingPaper?: string;
   teddy?: string;
   teddyType?: string;
   teddyColor?: string;
-  feltDesign?: string;
   softToys?: string;
   usiType?: string;
   massage?: string;

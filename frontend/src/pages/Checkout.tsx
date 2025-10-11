@@ -561,47 +561,118 @@ const Checkout = () => {
                                     {item.personalizationDetails.occasion}
                                   </div>
                                 )}
-                                {item.personalizationDetails.flowersCount && (
-                                  <div>
-                                    • Flowers:{" "}
-                                    {item.personalizationDetails.flowersCount}
-                                  </div>
-                                )}
-                                {item.personalizationDetails.flowersColor && (
-                                  <div>
-                                    • Color:{" "}
-                                    {item.personalizationDetails.flowersColor}
-                                  </div>
-                                )}
-                                {item.personalizationDetails.teddy && (
-                                  <div>
-                                    • Teddy: {item.personalizationDetails.teddy}
-                                  </div>
-                                )}
-                                {item.personalizationDetails.teddyType && (
-                                  <div>
-                                    • Teddy Type:{" "}
-                                    {item.personalizationDetails.teddyType}
-                                  </div>
-                                )}
-                                {item.personalizationDetails.wrappingPaper && (
+
+                                {/* New JSON structure fields */}
+                                {item.personalizationDetails.teddy &&
+                                  item.personalizationDetails.teddy
+                                    .included && (
+                                    <div>
+                                      • Teddy:{" "}
+                                      {item.personalizationDetails.teddy.type ||
+                                        "Bear"}
+                                      {item.personalizationDetails.teddy
+                                        .color &&
+                                        ` (${item.personalizationDetails.teddy.color})`}
+                                    </div>
+                                  )}
+
+                                {item.personalizationDetails.flowers &&
+                                  item.personalizationDetails.flowers.count && (
+                                    <div>
+                                      • Flowers:{" "}
+                                      {
+                                        item.personalizationDetails.flowers
+                                          .count
+                                      }
+                                      {item.personalizationDetails.flowers
+                                        .color &&
+                                        ` (${item.personalizationDetails.flowers.color})`}
+                                    </div>
+                                  )}
+
+                                {item.personalizationDetails.wrapping_paper && (
                                   <div>
                                     • Wrapping:{" "}
-                                    {item.personalizationDetails.wrappingPaper}
+                                    {item.personalizationDetails.wrapping_paper}
                                   </div>
                                 )}
-                                {item.personalizationDetails.feltDesign && (
-                                  <div>
-                                    • Custom Design:{" "}
-                                    {item.personalizationDetails.feltDesign}
-                                  </div>
-                                )}
-                                {item.personalizationDetails.softToys && (
+
+                                {item.personalizationDetails.soft_toys && (
                                   <div>
                                     • Soft Toys:{" "}
-                                    {item.personalizationDetails.softToys}
+                                    {item.personalizationDetails.soft_toys}
                                   </div>
                                 )}
+
+                                {item.personalizationDetails.felt_design && (
+                                  <div>
+                                    • Custom Design:{" "}
+                                    {item.personalizationDetails.felt_design}
+                                  </div>
+                                )}
+
+                                {item.personalizationDetails.custom_message && (
+                                  <div>
+                                    • Message:{" "}
+                                    {item.personalizationDetails.custom_message}
+                                  </div>
+                                )}
+
+                                {/* Legacy fields for backward compatibility */}
+                                {item.personalizationDetails.flowersCount &&
+                                  !item.personalizationDetails.flowers && (
+                                    <div>
+                                      • Flowers:{" "}
+                                      {item.personalizationDetails.flowersCount}
+                                    </div>
+                                  )}
+                                {item.personalizationDetails.flowersColor &&
+                                  !item.personalizationDetails.flowers && (
+                                    <div>
+                                      • Color:{" "}
+                                      {item.personalizationDetails.flowersColor}
+                                    </div>
+                                  )}
+                                {item.personalizationDetails.teddy &&
+                                  typeof item.personalizationDetails.teddy ===
+                                    "string" && (
+                                    <div>
+                                      • Teddy:{" "}
+                                      {item.personalizationDetails.teddy}
+                                    </div>
+                                  )}
+                                {item.personalizationDetails.teddyType &&
+                                  !item.personalizationDetails.teddy && (
+                                    <div>
+                                      • Teddy Type:{" "}
+                                      {item.personalizationDetails.teddyType}
+                                    </div>
+                                  )}
+                                {item.personalizationDetails.wrappingPaper &&
+                                  !item.personalizationDetails
+                                    .wrapping_paper && (
+                                    <div>
+                                      • Wrapping:{" "}
+                                      {
+                                        item.personalizationDetails
+                                          .wrappingPaper
+                                      }
+                                    </div>
+                                  )}
+                                {item.personalizationDetails.feltDesign &&
+                                  !item.personalizationDetails.felt_design && (
+                                    <div>
+                                      • Custom Design:{" "}
+                                      {item.personalizationDetails.feltDesign}
+                                    </div>
+                                  )}
+                                {item.personalizationDetails.softToys &&
+                                  !item.personalizationDetails.soft_toys && (
+                                    <div>
+                                      • Soft Toys:{" "}
+                                      {item.personalizationDetails.softToys}
+                                    </div>
+                                  )}
                               </div>
                             </div>
                           )}

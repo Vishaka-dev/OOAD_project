@@ -21,19 +21,14 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { apiClient } from "@/lib/api";
-import { PersonalizationOptionDTO } from "@/types/product";
-
-interface PersonalizationDetails {
-  occasion?: string;
-  flowersCount?: string;
-  flowersColor?: string;
-  wrappingPaper?: string;
-  teddy?: string;
-  teddyType?: string;
-  teddyColor?: string;
-  feltDesign?: string;
-  softToys?: string;
-}
+import {
+  PersonalizationOptionDTO,
+  PersonalizationDetails,
+} from "@/types/product";
+import {
+  convertToNewFormat,
+  calculateExtraCost,
+} from "@/lib/personalization-utils";
 
 interface ProductCardProps {
   product: Product | UIProduct;
@@ -111,34 +106,13 @@ export function ProductCard({ product, onViewDetails }: ProductCardProps) {
       reviews: productReviews,
     };
 
-    // Calculate extra price based on personalization options
-    let extraPrice = 0;
+    // Convert legacy format to new JSON structure
+    const newFormatDetails = convertToNewFormat(details);
 
-    // Add pricing logic based on personalization details
-    if (details.occasion === "Graduation") extraPrice += 5;
-    if (details.occasion === "Birthday") extraPrice += 3;
-    if (details.occasion === "Valentine") extraPrice += 8;
-    if (details.occasion === "Mini") extraPrice += 2;
+    // Calculate extra price using the new structure
+    const extraPrice = calculateExtraCost(newFormatDetails);
 
-    if (details.flowersCount === "3") extraPrice += 3;
-    if (details.flowersCount === "5") extraPrice += 5;
-    if (details.flowersCount === "7") extraPrice += 7;
-    if (details.flowersCount === "9") extraPrice += 9;
-    if (details.flowersCount === "12") extraPrice += 12;
-
-    if (details.teddy === "With") extraPrice += 15;
-    if (details.teddyType === "handmade") extraPrice += 5;
-    if (details.teddyType === "fluffy") extraPrice += 10;
-
-    if (details.wrappingPaper === "Premium") extraPrice += 3;
-    if (details.wrappingPaper === "Gift Box") extraPrice += 5;
-
-    if (details.softToys === "Yes") extraPrice += 8;
-
-    // Add extra price for custom felt design
-    if (details.feltDesign && details.feltDesign.trim()) extraPrice += 5;
-
-    addToCart(uiProduct, quantity, details, extraPrice);
+    addToCart(uiProduct, quantity, newFormatDetails, extraPrice);
     setOpen(false);
     setQuantity(1);
     setDetails({});
