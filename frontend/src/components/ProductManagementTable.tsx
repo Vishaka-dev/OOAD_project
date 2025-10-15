@@ -569,7 +569,7 @@ export function ProductManagementTable({
                       </div>
                     </TableCell>
                     <TableCell>{product.category}</TableCell>
-                    <TableCell>${product.price.toFixed(2)}</TableCell>
+                    <TableCell>Rs {product.price.toFixed(2)}</TableCell>
                     <TableCell>{product.stock}</TableCell>
                     <TableCell>{getStockStatus(product.stock)}</TableCell>
                     <TableCell className="text-right">

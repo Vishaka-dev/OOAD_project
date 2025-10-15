@@ -679,11 +679,11 @@ const Checkout = () => {
 
                         <div className="flex items-center gap-2 mt-2">
                           <Badge variant="outline" className="text-xs">
-                            ${item.price.toFixed(2)} each
+                            Rs {item.price.toFixed(2)} each
                           </Badge>
                           {item.extraPrice && item.extraPrice > 0 && (
                             <Badge variant="secondary" className="text-xs">
-                              +${item.extraPrice.toFixed(2)} extras
+                              +Rs {item.extraPrice.toFixed(2)} extras
                             </Badge>
                           )}
                           {item.stock && item.stock !== 999 && (
@@ -746,7 +746,7 @@ const Checkout = () => {
                       {/* Price */}
                       <div className="text-right min-w-[100px]">
                         <p className="font-semibold text-lg">
-                          $
+                          Rs
                           {(
                             (item.price + (item.extraPrice || 0)) *
                             item.quantity
@@ -754,13 +754,14 @@ const Checkout = () => {
                         </p>
                         {item.quantity > 1 && (
                           <p className="text-xs text-muted-foreground">
-                            ${(item.price + (item.extraPrice || 0)).toFixed(2)}{" "}
-                            × {item.quantity}
+                            Rs{" "}
+                            {(item.price + (item.extraPrice || 0)).toFixed(2)} ×{" "}
+                            {item.quantity}
                           </p>
                         )}
                         {item.extraPrice && item.extraPrice > 0 && (
                           <p className="text-xs text-muted-foreground">
-                            Base: ${item.price.toFixed(2)} + $
+                            Base: Rs {item.price.toFixed(2)} + Rs
                             {item.extraPrice.toFixed(2)} extras
                           </p>
                         )}
@@ -819,24 +820,24 @@ const Checkout = () => {
               <CardContent className="space-y-3">
                 <div className="flex justify-between text-sm">
                   <span>Subtotal</span>
-                  <span>${totals.subtotal.toFixed(2)}</span>
+                  <span>Rs {totals.subtotal.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span>Tax</span>
-                  <span>${totals.tax.toFixed(2)}</span>
+                  <span>Rs {totals.tax.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span>Shipping</span>
                   <span>
                     {totals.shipping === 0
                       ? "Free"
-                      : `$${totals.shipping.toFixed(2)}`}
+                      : `Rs ${totals.shipping.toFixed(2)}`}
                   </span>
                 </div>
                 <Separator />
                 <div className="flex justify-between font-semibold">
                   <span>Total</span>
-                  <span>${totals.total.toFixed(2)}</span>
+                  <span>Rs {totals.total.toFixed(2)}</span>
                 </div>
                 <Button
                   className="w-full"

@@ -94,7 +94,7 @@ export function PriceFilter({
         </div>
 
         <div className="text-xs text-muted-foreground text-center">
-          ${localRange[0]} - ${localRange[1]}
+          Rs {localRange[0]} - Rs {localRange[1]}
         </div>
       </div>
     </div>

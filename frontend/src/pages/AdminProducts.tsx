@@ -950,7 +950,7 @@ const AdminProducts = () => {
                       </p>
                       <div className="flex items-center gap-2 mt-1">
                         <Badge variant="outline" className="text-xs">
-                          ${product.price.toFixed(2)}
+                          Rs {product.price.toFixed(2)}
                         </Badge>
                         <Badge
                           variant={

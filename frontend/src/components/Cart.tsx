@@ -114,7 +114,7 @@ export function Cart({ isOpen, onClose }: CartProps) {
                               </Button>
                             </div>
                             <span className="font-semibold text-sm">
-                              ${(item.price * item.quantity).toFixed(2)}
+                              Rs {(item.price * item.quantity).toFixed(2)}
                             </span>
                           </div>
                         </div>
@@ -132,22 +132,22 @@ export function Cart({ isOpen, onClose }: CartProps) {
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>Subtotal:</span>
-                  <span>${total.toFixed(2)}</span>
+                  <span>Rs {total.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span>Tax:</span>
-                  <span>${tax.toFixed(2)}</span>
+                  <span>Rs {tax.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span>Shipping:</span>
                   <span>
-                    {shipping === 0 ? "Free" : `$${shipping.toFixed(2)}`}
+                    {shipping === 0 ? "Free" : `Rs ${shipping.toFixed(2)}`}
                   </span>
                 </div>
                 <Separator />
                 <div className="flex justify-between font-semibold">
                   <span>Total:</span>
-                  <span>${finalTotal.toFixed(2)}</span>
+                  <span>Rs {finalTotal.toFixed(2)}</span>
                 </div>
               </div>
 

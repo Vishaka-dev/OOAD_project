@@ -146,7 +146,7 @@ export function POSSystem() {
                     </h3>
                     <div className="flex items-center justify-between">
                       <span className="text-lg font-bold text-teddy-700">
-                        ${product.price.toFixed(2)}
+                        Rs {product.price.toFixed(2)}
                       </span>
                       <Badge
                         variant={
@@ -213,7 +213,7 @@ export function POSSystem() {
                             {item.name}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            ${item.price.toFixed(2)}
+                            Rs {item.price.toFixed(2)}
                           </p>
                         </div>
                         <div className="flex items-center space-x-1">
@@ -260,16 +260,16 @@ export function POSSystem() {
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span>Subtotal:</span>
-                    <span>${subtotal.toFixed(2)}</span>
+                    <span>Rs {subtotal.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span>Tax (8%):</span>
-                    <span>${tax.toFixed(2)}</span>
+                    <span>Rs {tax.toFixed(2)}</span>
                   </div>
                   <Separator />
                   <div className="flex justify-between font-bold text-lg">
                     <span>Total:</span>
-                    <span>${total.toFixed(2)}</span>
+                    <span>Rs {total.toFixed(2)}</span>
                   </div>
                 </div>
 
@@ -305,7 +305,7 @@ export function POSSystem() {
                     onClick={handleCheckout}
                   >
                     <Receipt className="mr-2 h-4 w-4" />
-                    Process Sale (${total.toFixed(2)})
+                    Process Sale (Rs {total.toFixed(2)})
                   </Button>
                   <Button
                     variant="outline"

@@ -173,7 +173,7 @@ const ProductDetails = () => {
                 >
                   <img
                     src={product.image}
-                    alt={`${product.name} view ${i}`}
+                    alt={`Rs{product.name} view Rs{i}`}
                     className="h-full w-full object-cover"
                   />
                 </div>
@@ -213,11 +213,11 @@ const ProductDetails = () => {
 
               <div className="flex items-center gap-4 mb-6">
                 <span className="text-3xl font-bold">
-                  ${product.price.toFixed(2)}
+                  Rs {product.price.toFixed(2)}
                 </span>
                 {product.originalPrice && (
                   <span className="text-xl text-muted-foreground line-through">
-                    ${product.originalPrice.toFixed(2)}
+                    Rs {product.originalPrice.toFixed(2)}
                   </span>
                 )}
               </div>
@@ -318,7 +318,7 @@ const ProductDetails = () => {
                 <div>
                   <p className="font-medium">Free Shipping</p>
                   <p className="text-sm text-muted-foreground">
-                    On orders over $50
+                    On orders over Rs 50
                   </p>
                 </div>
               </div>

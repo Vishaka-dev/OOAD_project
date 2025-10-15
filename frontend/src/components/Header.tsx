@@ -104,6 +104,11 @@ export function Header({ onCartClick, onSearchClick }: HeaderProps) {
                       ? `Welcome, ${userInfo.username}`
                       : `Logged in as ${currentUser}`}
                   </div>
+                  {currentUser === "customer" && (
+                    <DropdownMenuItem asChild>
+                      <Link to="/profile">👤 My Profile</Link>
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem
                     onClick={() => setCurrentUser("customer")}
                     className={currentUser === "customer" ? "bg-accent" : ""}

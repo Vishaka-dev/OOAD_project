@@ -139,7 +139,7 @@ const Index = () => {
 
                         <div className="flex items-center justify-between">
                           <span className="text-lg font-bold text-foreground">
-                            ${product.price.toFixed(2)}
+                            Rs {product.price.toFixed(2)}
                           </span>
                           <Badge variant="outline" className="text-xs">
                             {product.category}

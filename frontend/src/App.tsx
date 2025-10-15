@@ -12,6 +12,7 @@ import ProductDetails from "./pages/ProductDetails";
 import Category from "./pages/Category";
 import AdminProducts from "./pages/AdminProducts";
 import ProductManagement from "./pages/ProductManagement";
+import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 import { AdminDashboard } from "@/components/AdminDashboard";
 
@@ -31,6 +32,7 @@ const App = () => (
             <Route path="/products" element={<Products />} />
             <Route path="/product/:productId" element={<ProductDetails />} />
             <Route path="/category/:categoryId" element={<Category />} />
+            <Route path="/profile" element={<Profile />} />
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/admin/products" element={<AdminProducts />} />
             <Route path="/product-management" element={<ProductManagement />} />
