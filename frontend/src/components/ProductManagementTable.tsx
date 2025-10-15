@@ -57,6 +57,11 @@ export function ProductManagementTable({
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Image upload state
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>("");
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+
   // Form state for adding new product
   const [newProduct, setNewProduct] = useState<CreateProductRequest>({
     categoryId: 0,
@@ -100,6 +105,81 @@ export function ProductManagementTable({
     (product) => product.stock <= 5 && product.stock > 0
   );
 
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith("image/")) {
+        toast({
+          title: "Invalid File",
+          description: "Please select an image file",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Validate file size (max 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        toast({
+          title: "File Too Large",
+          description: "Image size should be less than 10MB",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setSelectedImage(file);
+
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const uploadImage = async (): Promise<string | null> => {
+    if (!selectedImage) return null;
+
+    const formData = new FormData();
+    formData.append("file", selectedImage);
+
+    try {
+      setIsUploadingImage(true);
+      const token = localStorage.getItem("auth_token");
+
+      const response = await fetch(
+        "http://localhost:8081/api/upload/product-image",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: formData,
+        }
+      );
+
+      const data = await response.json();
+
+      if (data.success) {
+        return data.imageUrl;
+      } else {
+        throw new Error(data.message || "Upload failed");
+      }
+    } catch (error) {
+      console.error("Image upload failed:", error);
+      toast({
+        title: "Upload Failed",
+        description: "Failed to upload image. Please try again.",
+        variant: "destructive",
+      });
+      return null;
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
+
   const handleAddProduct = async () => {
     if (
       !newProduct.name ||
@@ -117,9 +197,30 @@ export function ProductManagementTable({
 
     try {
       setIsSubmitting(true);
-      console.log("🔄 Creating new product:", newProduct);
 
-      const createdProduct = await apiClient.createProduct(newProduct);
+      // Upload image first if selected
+      let imageUrl = newProduct.imageUrl;
+      if (selectedImage) {
+        const uploadedUrl = await uploadImage();
+        if (!uploadedUrl) {
+          toast({
+            title: "Error",
+            description: "Failed to upload image. Please try again.",
+            variant: "destructive",
+          });
+          return;
+        }
+        imageUrl = `http://localhost:8081${uploadedUrl}`;
+      }
+
+      const productData = {
+        ...newProduct,
+        imageUrl: imageUrl || "/placeholder.svg",
+      };
+
+      console.log("🔄 Creating new product:", productData);
+
+      const createdProduct = await apiClient.createProduct(productData);
       console.log("✅ Product created successfully:", createdProduct);
 
       toast({
@@ -136,6 +237,8 @@ export function ProductManagementTable({
         imageUrl: "",
         stockQuantity: 0,
       });
+      setSelectedImage(null);
+      setImagePreview("");
       setIsAddDialogOpen(false);
 
       // Refresh products list
@@ -193,11 +296,70 @@ export function ProductManagementTable({
                 Add Product
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Add New Product</DialogTitle>
               </DialogHeader>
               <div className="grid gap-4 py-4">
+                {/* Image Upload Section */}
+                <div className="space-y-2">
+                  <Label htmlFor="image">Product Image</Label>
+                  <div className="flex flex-col gap-4">
+                    {imagePreview && (
+                      <div className="relative w-full h-48 border rounded-lg overflow-hidden">
+                        <img
+                          src={imagePreview}
+                          alt="Preview"
+                          className="w-full h-full object-cover"
+                        />
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          className="absolute top-2 right-2"
+                          onClick={() => {
+                            setSelectedImage(null);
+                            setImagePreview("");
+                          }}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
+                    <Input
+                      id="image"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageSelect}
+                      disabled={isUploadingImage}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Accepted formats: JPG, PNG, GIF (Max 10MB)
+                    </p>
+                  </div>
+
+                  {/* Alternative: URL input */}
+                  <div className="space-y-2 pt-2">
+                    <Label
+                      htmlFor="imageUrl"
+                      className="text-sm text-muted-foreground"
+                    >
+                      Or paste image URL
+                    </Label>
+                    <Input
+                      id="imageUrl"
+                      placeholder="https://example.com/image.jpg"
+                      value={newProduct.imageUrl}
+                      onChange={(e) =>
+                        setNewProduct({
+                          ...newProduct,
+                          imageUrl: e.target.value,
+                        })
+                      }
+                      disabled={!!selectedImage}
+                    />
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="name">Product Name *</Label>
@@ -251,7 +413,7 @@ export function ProductManagementTable({
                     }
                   />
                 </div>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="price">Price *</Label>
                     <Input
@@ -285,31 +447,26 @@ export function ProductManagementTable({
                       }
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="imageUrl">Image URL</Label>
-                    <Input
-                      id="imageUrl"
-                      placeholder="https://example.com/image.jpg"
-                      value={newProduct.imageUrl}
-                      onChange={(e) =>
-                        setNewProduct({
-                          ...newProduct,
-                          imageUrl: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
                 </div>
               </div>
               <div className="flex justify-end gap-2">
                 <Button
                   variant="outline"
-                  onClick={() => setIsAddDialogOpen(false)}
+                  onClick={() => {
+                    setIsAddDialogOpen(false);
+                    setSelectedImage(null);
+                    setImagePreview("");
+                  }}
                 >
                   Cancel
                 </Button>
-                <Button onClick={handleAddProduct} disabled={isSubmitting}>
-                  {isSubmitting ? "Creating..." : "Create Product"}
+                <Button
+                  onClick={handleAddProduct}
+                  disabled={isSubmitting || isUploadingImage}
+                >
+                  {isSubmitting || isUploadingImage
+                    ? "Processing..."
+                    : "Create Product"}
                 </Button>
               </div>
             </DialogContent>

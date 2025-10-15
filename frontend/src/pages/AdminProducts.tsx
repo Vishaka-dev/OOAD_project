@@ -13,6 +13,7 @@ import {
   Package,
   AlertTriangle,
   ArrowLeft,
+  X,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { UIProduct, CreateProductRequest } from "@/types/product";
@@ -58,6 +59,11 @@ const AdminProducts = () => {
     null
   );
 
+  // Image upload state
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>("");
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+
   // Form state for adding new product
   const [newProduct, setNewProduct] = useState<CreateProductRequest>({
     categoryId: 0,
@@ -102,6 +108,104 @@ const AdminProducts = () => {
     (product) => product.stock <= 5 && product.stock > 0
   );
 
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith("image/")) {
+        toast({
+          title: "Invalid File",
+          description: "Please select an image file",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Validate file size (max 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        toast({
+          title: "File Too Large",
+          description: "Image size should be less than 10MB",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setSelectedImage(file);
+
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const uploadImage = async (): Promise<string | null> => {
+    if (!selectedImage) return null;
+
+    const formData = new FormData();
+    formData.append("file", selectedImage);
+
+    try {
+      setIsUploadingImage(true);
+      const token = localStorage.getItem("auth_token");
+
+      console.log("🔄 Uploading image to backend...");
+      console.log("Token:", token ? "Present" : "Missing");
+
+      const response = await fetch(
+        "http://localhost:8081/api/upload/product-image",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: formData,
+        }
+      );
+
+      console.log("Response status:", response.status);
+      console.log("Response headers:", response.headers);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Server error:", errorText);
+        throw new Error(`Server error: ${response.status} - ${errorText}`);
+      }
+
+      const responseText = await response.text();
+      console.log("Response text:", responseText);
+
+      if (!responseText) {
+        throw new Error("Empty response from server");
+      }
+
+      const data = JSON.parse(responseText);
+      console.log("Parsed data:", data);
+
+      if (data.success) {
+        return data.imageUrl;
+      } else {
+        throw new Error(data.message || "Upload failed");
+      }
+    } catch (error) {
+      console.error("Image upload failed:", error);
+      toast({
+        title: "Upload Failed",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to upload image. Please try again.",
+        variant: "destructive",
+      });
+      return null;
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
+
   const handleAddProduct = async () => {
     // Check authentication first
     console.log("🔄 Current user:", currentUser);
@@ -135,9 +239,30 @@ const AdminProducts = () => {
 
     try {
       setIsSubmitting(true);
-      console.log("🔄 Creating new product:", newProduct);
 
-      const createdProduct = await apiClient.createProduct(newProduct);
+      // Upload image first if selected
+      let imageUrl = newProduct.imageUrl;
+      if (selectedImage) {
+        const uploadedUrl = await uploadImage();
+        if (!uploadedUrl) {
+          toast({
+            title: "Error",
+            description: "Failed to upload image. Please try again.",
+            variant: "destructive",
+          });
+          return;
+        }
+        imageUrl = `http://localhost:8081${uploadedUrl}`;
+      }
+
+      const productData = {
+        ...newProduct,
+        imageUrl: imageUrl || "/placeholder.svg",
+      };
+
+      console.log("🔄 Creating new product:", productData);
+
+      const createdProduct = await apiClient.createProduct(productData);
       console.log("✅ Product created successfully:", createdProduct);
 
       toast({
@@ -154,6 +279,8 @@ const AdminProducts = () => {
         imageUrl: "",
         stockQuantity: 0,
       });
+      setSelectedImage(null);
+      setImagePreview("");
       setIsAddDialogOpen(false);
 
       // Refresh products list
@@ -280,7 +407,6 @@ const AdminProducts = () => {
   if (currentUser !== "admin") {
     return (
       <div className="min-h-screen bg-background">
-
         <div className="container max-w-screen-xl mx-auto px-4 py-8">
           <div className="text-center py-12">
             <h1 className="text-2xl font-bold text-destructive mb-4">
@@ -301,7 +427,6 @@ const AdminProducts = () => {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
-
         <div className="container max-w-screen-xl mx-auto px-4 py-8">
           <div className="animate-pulse space-y-4">
             <div className="h-8 bg-muted rounded w-1/4"></div>
@@ -314,21 +439,19 @@ const AdminProducts = () => {
 
   return (
     <div className="min-h-screen bg-background">
-
       <div className="container max-w-screen-xl mx-auto px-4 py-8">
         <Button variant="ghost" size="sm" asChild>
-            <Link to="/admin">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to Dashboard
-            </Link>
-          </Button>
+          <Link to="/admin">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Dashboard
+          </Link>
+        </Button>
       </div>
 
       <div className="container max-w-screen-xl mx-auto px-4 py-0">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
-            
             <div>
               <h1 className="text-3xl font-bold">Product Management</h1>
               <p className="text-muted-foreground">
@@ -336,7 +459,7 @@ const AdminProducts = () => {
               </p>
             </div>
           </div>
-          
+
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
               <Button>
@@ -344,11 +467,70 @@ const AdminProducts = () => {
                 Add Product
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Add New Product</DialogTitle>
               </DialogHeader>
               <div className="grid gap-4 py-4">
+                {/* Image Upload Section */}
+                <div className="space-y-2">
+                  <Label htmlFor="image">Product Image</Label>
+                  <div className="flex flex-col gap-4">
+                    {imagePreview && (
+                      <div className="relative w-full h-48 border rounded-lg overflow-hidden">
+                        <img
+                          src={imagePreview}
+                          alt="Preview"
+                          className="w-full h-full object-cover"
+                        />
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          className="absolute top-2 right-2"
+                          onClick={() => {
+                            setSelectedImage(null);
+                            setImagePreview("");
+                          }}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
+                    <Input
+                      id="image"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageSelect}
+                      disabled={isUploadingImage}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Accepted formats: JPG, PNG, GIF (Max 10MB)
+                    </p>
+                  </div>
+
+                  {/* Alternative: URL input */}
+                  <div className="space-y-2 pt-2">
+                    <Label
+                      htmlFor="imageUrl"
+                      className="text-sm text-muted-foreground"
+                    >
+                      Or paste image URL
+                    </Label>
+                    <Input
+                      id="imageUrl"
+                      placeholder="https://example.com/image.jpg"
+                      value={newProduct.imageUrl}
+                      onChange={(e) =>
+                        setNewProduct({
+                          ...newProduct,
+                          imageUrl: e.target.value,
+                        })
+                      }
+                      disabled={!!selectedImage}
+                    />
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="name">Product Name *</Label>
@@ -409,7 +591,7 @@ const AdminProducts = () => {
                     }
                   />
                 </div>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="price">Price *</Label>
                     <Input
@@ -443,31 +625,26 @@ const AdminProducts = () => {
                       }
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="imageUrl">Image URL</Label>
-                    <Input
-                      id="imageUrl"
-                      placeholder="https://example.com/image.jpg"
-                      value={newProduct.imageUrl}
-                      onChange={(e) =>
-                        setNewProduct({
-                          ...newProduct,
-                          imageUrl: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
                 </div>
               </div>
               <div className="flex justify-end gap-2">
                 <Button
                   variant="outline"
-                  onClick={() => setIsAddDialogOpen(false)}
+                  onClick={() => {
+                    setIsAddDialogOpen(false);
+                    setSelectedImage(null);
+                    setImagePreview("");
+                  }}
                 >
                   Cancel
                 </Button>
-                <Button onClick={handleAddProduct} disabled={isSubmitting}>
-                  {isSubmitting ? "Creating..." : "Create Product"}
+                <Button
+                  onClick={handleAddProduct}
+                  disabled={isSubmitting || isUploadingImage}
+                >
+                  {isSubmitting || isUploadingImage
+                    ? "Processing..."
+                    : "Create Product"}
                 </Button>
               </div>
             </DialogContent>
