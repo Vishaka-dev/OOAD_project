@@ -11,7 +11,7 @@ import {
   UpdateStockRequest
 } from '@/types/product';
 
-const API_BASE_URL = 'http://localhost:8081/api';
+const API_BASE_URL = 'pinkypromisebackend-production.up.railway.ap';
 
 // Types for API requests and responses
 export interface AuthRequest {
