@@ -26,6 +26,17 @@ public class JwtRequestFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
             FilterChain chain) throws ServletException, IOException {
 
+        // Skip JWT processing for clearly public endpoints only
+        String requestPath = request.getRequestURI();
+        if (requestPath.startsWith("/actuator/") ||
+                requestPath.startsWith("/api/auth/") ||
+                requestPath.startsWith("/uploads/") ||
+                (requestPath.startsWith("/api/products/") && !requestPath.startsWith("/api/products/admin")) ||
+                (requestPath.startsWith("/api/categories/") && !requestPath.startsWith("/api/categories/admin"))) {
+            chain.doFilter(request, response);
+            return;
+        }
+
         final String requestTokenHeader = request.getHeader("Authorization");
         System.out.println("🔄 JWT Filter - Request URL: " + request.getRequestURL());
         System.out.println("🔄 JWT Filter - Request Method: " + request.getMethod());

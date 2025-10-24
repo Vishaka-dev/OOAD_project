@@ -25,7 +25,7 @@ export function Cart({ isOpen, onClose }: CartProps) {
 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm">
-      <div className="fixed right-0 top-0 h-full w-full max-w-md bg-background shadow-xl">
+      <div className="fixed right-0 top-0 h-full w-full sm:max-w-md bg-background shadow-xl">
         <div className="flex h-full flex-col">
           {/* Header */}
           <div className="flex items-center justify-between border-b p-4">
@@ -61,23 +61,36 @@ export function Cart({ isOpen, onClose }: CartProps) {
                     key={`${item.id}-${item.backendId || index}`}
                     className="overflow-hidden"
                   >
-                    <CardContent className="p-4">
-                      <div className="flex space-x-4">
-                        <div className="h-16 w-16 rounded-md bg-gradient-to-br from-teddy-50 to-pink-50 overflow-hidden">
+                    <CardContent className="p-3 sm:p-4">
+                      <div className="flex space-x-3 sm:space-x-4">
+                        <div className="h-14 w-14 sm:h-16 sm:w-16 flex-shrink-0 rounded-md bg-gradient-to-br from-teddy-50 to-pink-50 overflow-hidden">
                           <img
                             src={item.image}
                             alt={item.name}
                             className="h-full w-full object-cover"
                           />
                         </div>
-                        <div className="flex-1 space-y-2">
-                          <div className="flex items-start justify-between">
-                            <h4 className="font-medium text-sm">{item.name}</h4>
+                        <div className="flex-1 space-y-2 min-w-0">
+                          <div className="flex items-start justify-between gap-2">
+                            <h4 className="font-medium text-sm truncate">
+                              {item.name}
+                            </h4>
                             <Button
                               variant="ghost"
                               size="icon"
                               className="h-6 w-6"
-                              onClick={() => removeFromCart(item.id)}
+                              onClick={() => {
+                                console.log(
+                                  "🗑️ Removing item from cart:",
+                                  item
+                                );
+                                console.log("🗑️ Item ID:", item.id);
+                                console.log(
+                                  "🗑️ Item backendId:",
+                                  item.backendId
+                                );
+                                removeFromCart(item.id);
+                              }}
                             >
                               <X className="h-3 w-3" />
                             </Button>

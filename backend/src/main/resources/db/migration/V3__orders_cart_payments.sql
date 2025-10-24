@@ -1,9 +1,9 @@
 -- Orders Table (Member C)
 CREATE TABLE orders (
-    order_id INT AUTO_INCREMENT PRIMARY KEY,
+    order_id SERIAL PRIMARY KEY,
     user_id INT,
     order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    status ENUM('Pending', 'Confirmed', 'Shipped', 'Delivered', 'Cancelled') DEFAULT 'Pending',
+    status VARCHAR(20) DEFAULT 'Pending' CHECK (status IN ('Pending', 'Confirmed', 'Shipped', 'Delivered', 'Cancelled')),
     total_price DECIMAL(10,2) NOT NULL,
     delivery_scheduled_date DATE,
     delivery_address VARCHAR(255) NOT NULL,
@@ -13,41 +13,41 @@ CREATE TABLE orders (
 
 -- Order Items Table (Member C)
 CREATE TABLE order_items (
-    item_id INT AUTO_INCREMENT PRIMARY KEY,
+    item_id SERIAL PRIMARY KEY,
     order_id INT,
     product_id INT,
     quantity INT NOT NULL,
     price DECIMAL(10,2) NOT NULL,
-    personalization_details JSON,
+    personalization_details JSONB,
     FOREIGN KEY (order_id) REFERENCES orders(order_id) ON DELETE CASCADE,
     FOREIGN KEY (product_id) REFERENCES products(product_id) ON DELETE SET NULL
 );
 
 -- Payments Table (Member C)
 CREATE TABLE payments (
-    payment_id INT AUTO_INCREMENT PRIMARY KEY,
+    payment_id SERIAL PRIMARY KEY,
     order_id INT,
     amount DECIMAL(10,2) NOT NULL,
-    status ENUM('Pending', 'Completed', 'Failed') DEFAULT 'Pending',
+    status VARCHAR(20) DEFAULT 'Pending' CHECK (status IN ('Pending', 'Completed', 'Failed')),
     transaction_id VARCHAR(100),
-    payment_method ENUM('credit_card', 'payhear', 'cod') NOT NULL,
+    payment_method VARCHAR(20) NOT NULL CHECK (payment_method IN ('credit_card', 'payhear', 'cod')),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (order_id) REFERENCES orders(order_id) ON DELETE CASCADE
 );
 
 -- Cart Tables (Member C)
 CREATE TABLE carts (
-    cart_id INT AUTO_INCREMENT PRIMARY KEY,
+    cart_id SERIAL PRIMARY KEY,
     user_id INT,
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 );
 
 CREATE TABLE cart_items (
-    item_id INT AUTO_INCREMENT PRIMARY KEY,
+    item_id SERIAL PRIMARY KEY,
     cart_id INT,
     product_id INT,
     quantity INT NOT NULL,
-    personalization_details JSON,
+    personalization_details JSONB,
     FOREIGN KEY (cart_id) REFERENCES carts(cart_id) ON DELETE CASCADE,
     FOREIGN KEY (product_id) REFERENCES products(product_id) ON DELETE SET NULL
 );

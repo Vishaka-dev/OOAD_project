@@ -94,7 +94,16 @@ public class CheckoutService {
         Payment.PaymentMethod method = request.getPaymentMethod(); // Direct assignment since it's already enum
         paymentService.createPayment(order, method, total);
 
-        sendConfirmationEmail(request, order); // FIXED: Pass CheckoutRequestDTO
+        // Send confirmation email (non-blocking - don't fail checkout if email fails)
+        try {
+            System.out.println("📧 Attempting to send order confirmation email...");
+            sendConfirmationEmail(request, order); // FIXED: Pass CheckoutRequestDTO
+            System.out.println("✅ Order confirmation email sent successfully");
+        } catch (Exception e) {
+            System.err.println("⚠️ Failed to send order confirmation email: " + e.getMessage());
+            System.err.println("⚠️ Order was still created successfully - email failure is non-critical");
+            // Log but don't throw - email failure should not prevent checkout
+        }
 
         // clear cart
         cart.getCartItems().forEach(cartItemRepository::delete);
@@ -104,6 +113,8 @@ public class CheckoutService {
 
     // FIXED: Parameter type should be CheckoutRequestDTO
     private void sendConfirmationEmail(CheckoutRequestDTO request, Order order) {
+        System.out.println("📧 Preparing to send confirmation email for order: " + order.getOrderId());
+
         String subject = "Order #" + order.getOrderId() + " confirmed";
         String body = "Order confirmed. Deliver within 5 days.\n" +
                 "Order ID: " + order.getOrderId() + "\n" +
@@ -111,18 +122,24 @@ public class CheckoutService {
                 "Delivery Address: " + order.getDeliveryAddress();
 
         // Send to admin
+        System.out.println("📧 Sending email to admin: " + adminEmail);
         SimpleMailMessage adminMsg = new SimpleMailMessage();
+        adminMsg.setFrom(order.getUser().getEmail()); // Set from address
         adminMsg.setTo(adminEmail);
         adminMsg.setSubject(subject);
         adminMsg.setText(body);
         mailSender.send(adminMsg);
+        System.out.println("✅ Admin email sent successfully");
 
         // Send to customer - use user's email from the User entity
         String customerEmail = order.getUser().getEmail();
+        System.out.println("📧 Sending email to customer: " + customerEmail);
         SimpleMailMessage custMsg = new SimpleMailMessage();
+        custMsg.setFrom(order.getUser().getEmail()); // Set from address
         custMsg.setTo(customerEmail);
         custMsg.setSubject(subject);
         custMsg.setText(body);
         mailSender.send(custMsg);
+        System.out.println("✅ Customer email sent successfully");
     }
 }

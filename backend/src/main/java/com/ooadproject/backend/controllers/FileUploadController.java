@@ -23,7 +23,8 @@ import java.util.UUID;
 public class FileUploadController {
 
     // Directory where uploaded images will be stored
-    private static final String UPLOAD_DIR = "backend/uploads/products/";
+    // Use absolute path that works in both local and Railway environments
+    private static final String UPLOAD_DIR = System.getProperty("user.dir") + "/uploads/products/";
 
     @PostMapping("/product-image")
     @PreAuthorize("hasRole('ADMIN')")

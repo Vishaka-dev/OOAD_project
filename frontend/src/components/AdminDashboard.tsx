@@ -57,6 +57,86 @@ export function AdminDashboard() {
   const [expandedOrderId, setExpandedOrderId] = useState<number | null>(null);
   const navigate = useNavigate();
 
+  // Helper function to safely get personalization details
+  const getPersonalizationDetails = (details: Record<string, unknown>) => {
+    const result: string[] = [];
+
+    // Debug: Log the actual structure
+    console.log("🔍 Admin - Personalization details structure:", details);
+
+    if (details.occasion) {
+      result.push(`• Occasion: ${String(details.occasion)}`);
+    }
+
+    // Check for teddy bear details (new structure)
+    if (
+      details.teddy &&
+      typeof details.teddy === "object" &&
+      details.teddy !== null
+    ) {
+      const teddy = details.teddy as Record<string, unknown>;
+      if (teddy.included) {
+        const type = teddy.type ? String(teddy.type) : "Bear";
+        const color = teddy.color ? ` (${String(teddy.color)})` : "";
+        result.push(`• Teddy: ${type}${color}`);
+      }
+    }
+
+    // Check for flower details (new structure)
+    if (
+      details.flowers &&
+      typeof details.flowers === "object" &&
+      details.flowers !== null
+    ) {
+      const flowers = details.flowers as Record<string, unknown>;
+      if (flowers.count && Number(flowers.count) > 0) {
+        const count = String(flowers.count);
+        const color = flowers.color ? ` (${String(flowers.color)})` : "";
+        result.push(`• Flowers: ${count} flowers${color}`);
+      }
+    }
+
+    // Check for wrapping paper
+    if (details.wrapping_paper) {
+      result.push(`• Wrapping Paper: ${String(details.wrapping_paper)}`);
+    }
+
+    // Check for soft toys
+    if (details.soft_toys) {
+      result.push(`• Soft Toys: ${String(details.soft_toys)}`);
+    }
+
+    // Check for felt design
+    if (details.felt_design) {
+      result.push(`• Felt Design: ${String(details.felt_design)}`);
+    }
+
+    // Check for custom message
+    if (details.custom_message) {
+      result.push(`• Message: "${String(details.custom_message)}"`);
+    }
+
+    // Check for extra cost
+    if (details.extra_cost && Number(details.extra_cost) > 0) {
+      result.push(`• Extra Cost: Rs ${Number(details.extra_cost).toFixed(2)}`);
+    }
+
+    // Legacy field support
+    if (details.wrappingPaper) {
+      result.push(`• Wrapping Paper: ${String(details.wrappingPaper)}`);
+    }
+
+    if (details.softToys) {
+      result.push(`• Soft Toys: ${String(details.softToys)}`);
+    }
+
+    if (details.massage) {
+      result.push(`• Message: "${String(details.massage)}"`);
+    }
+
+    return result;
+  };
+
   // Load data on component mount
   useEffect(() => {
     const loadData = async () => {
@@ -143,44 +223,49 @@ export function AdminDashboard() {
         </div>
 
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
               Admin Dashboard
             </h1>
-            <p className="text-muted-foreground">Manage your TeddyLove store</p>
+            <p className="text-muted-foreground text-sm sm:text-base">
+              Manage your TeddyLove store
+            </p>
           </div>
-          <div className="flex gap-2">
-            <Button asChild>
+          <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+            <Button asChild className="flex-1 sm:flex-none">
               <Link to="/admin/products">
                 <Package className="mr-2 h-4 w-4" />
-                Manage Products
+                <span className="hidden sm:inline">Manage Products</span>
+                <span className="sm:hidden">Products</span>
               </Link>
             </Button>
-            <Button variant="outline">
+            <Button variant="outline" className="flex-1 sm:flex-none">
               <Settings className="mr-2 h-4 w-4" />
               Settings
             </Button>
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="flex space-x-1 mb-8 bg-muted p-1 rounded-lg w-fit">
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
-            return (
-              <Button
-                key={tab.id}
-                variant={selectedTab === tab.id ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setSelectedTab(tab.id as any)}
-                className="data-[state=active]:bg-background"
-              >
-                <Icon className="mr-2 h-4 w-4" />
-                {tab.label}
-              </Button>
-            );
-          })}
+        {/* Tabs - Responsive with horizontal scroll on mobile */}
+        <div className="mb-8 -mx-4 px-4 lg:mx-0 lg:px-0 overflow-x-auto">
+          <div className="flex space-x-1 bg-muted p-1 rounded-lg w-fit min-w-full lg:min-w-0">
+            {tabs.map((tab) => {
+              const Icon = tab.icon;
+              return (
+                <Button
+                  key={tab.id}
+                  variant={selectedTab === tab.id ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setSelectedTab(tab.id as any)}
+                  className="data-[state=active]:bg-background flex-shrink-0 touch-manipulation"
+                >
+                  <Icon className="mr-2 h-4 w-4" />
+                  <span className="whitespace-nowrap">{tab.label}</span>
+                </Button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Overview Tab */}
@@ -531,28 +616,44 @@ export function AdminDashboard() {
                                       order.orderItems.map((item: any) => (
                                         <div
                                           key={item.itemId}
-                                          className="flex items-center justify-between text-sm border rounded-md p-2"
+                                          className="border rounded-md p-3 space-y-2"
                                         >
-                                          <div className="mr-4">
+                                          <div className="flex items-center justify-between">
                                             <div className="font-medium">
                                               {item.productName}
                                             </div>
-                                            {item.personalizationDetails && (
-                                              <div className="text-xs text-muted-foreground">
-                                                Personalized
+                                            <div className="flex items-center gap-4">
+                                              <span>x{item.quantity}</span>
+                                              <span>
+                                                $
+                                                {(
+                                                  item.itemTotal ||
+                                                  item.price * item.quantity
+                                                ).toFixed(2)}
+                                              </span>
+                                            </div>
+                                          </div>
+
+                                          {/* Personalization Details */}
+                                          {item.personalizationDetails &&
+                                            Object.keys(
+                                              item.personalizationDetails
+                                            ).length > 0 && (
+                                              <div className="bg-muted/50 rounded-md p-2 space-y-1">
+                                                <div className="text-xs font-medium text-muted-foreground">
+                                                  Personalization Details:
+                                                </div>
+                                                <div className="text-xs space-y-1">
+                                                  {getPersonalizationDetails(
+                                                    item.personalizationDetails
+                                                  ).map((detail, index) => (
+                                                    <div key={index}>
+                                                      {detail}
+                                                    </div>
+                                                  ))}
+                                                </div>
                                               </div>
                                             )}
-                                          </div>
-                                          <div className="flex items-center gap-4">
-                                            <span>x{item.quantity}</span>
-                                            <span>
-                                              $
-                                              {(
-                                                item.itemTotal ||
-                                                item.price * item.quantity
-                                              ).toFixed(2)}
-                                            </span>
-                                          </div>
                                         </div>
                                       ))
                                     ) : (

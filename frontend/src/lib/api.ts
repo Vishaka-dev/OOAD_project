@@ -11,7 +11,7 @@ import {
   UpdateStockRequest
 } from '@/types/product';
 
-const API_BASE_URL = 'pinkypromisebackend-production.up.railway.ap';
+const API_BASE_URL = 'https://backend-production-8f5c.up.railway.app';
 
 // Types for API requests and responses
 export interface AuthRequest {
@@ -63,7 +63,18 @@ export interface OrderResponse {
   totalPrice: number;
   status: string;
   orderDate: string;
-  orderItems: unknown[];
+  deliveryAddress: string;
+  contactNumber: string;
+  orderItems: OrderItem[];
+}
+
+export interface OrderItem {
+  itemId: number;
+  productName: string;
+  quantity: number;
+  price: number;
+  itemTotal: number;
+  personalizationDetails?: Record<string, unknown>;
 }
 
 // Dashboard interfaces
@@ -144,9 +155,14 @@ class ApiClient {
       'Content-Type': 'application/json',
     };
 
-    // Always check localStorage for the latest token
+    // Check if this is a public endpoint that doesn't need authentication
+    const isPublicEndpoint = url.includes('/api/products') && !url.includes('/admin') ||
+                            url.includes('/api/categories') && !url.includes('/admin') ||
+                            url.includes('/api/auth');
+    
+    // Only send token for authenticated endpoints
     const currentToken = localStorage.getItem('auth_token');
-    if (currentToken) {
+    if (currentToken && !isPublicEndpoint) {
       headers.Authorization = `Bearer ${currentToken}`;
     }
 
@@ -161,7 +177,7 @@ class ApiClient {
     };
 
     console.log('🔄 Making API request:', { url, method: options.method || 'GET', headers });
-    console.log('🔄 Auth token being sent:', currentToken);
+    console.log('🔄 Auth token being sent:', isPublicEndpoint ? 'none (public endpoint)' : currentToken);
 
     try {
       const response = await fetch(url, config);
@@ -203,7 +219,7 @@ class ApiClient {
 
   // Authentication methods
   async login(credentials: AuthRequest): Promise<AuthResponse> {
-    const response = await this.request<AuthResponse>('/auth/login', {
+    const response = await this.request<AuthResponse>('/api/auth/login', {
       method: 'POST',
       body: JSON.stringify(credentials),
     });
@@ -214,7 +230,7 @@ class ApiClient {
   }
 
   async register(userData: RegisterRequest): Promise<AuthResponse> {
-    const response = await this.request<AuthResponse>('/auth/register', {
+    const response = await this.request<AuthResponse>('/api/auth/register', {
       method: 'POST',
       body: JSON.stringify(userData),
     });
@@ -235,11 +251,11 @@ class ApiClient {
 
   // Cart methods
   async getCartItems(): Promise<CartItemDTO[]> {
-    return this.request<CartItemDTO[]>('/cart');
+    return this.request<CartItemDTO[]>('/api/cart');
   }
 
   async getCartTotal(): Promise<number> {
-    const total = await this.request<number>('/cart/total');
+    const total = await this.request<number>('/api/cart/total');
     return total;
   }
 
@@ -249,7 +265,7 @@ class ApiClient {
       quantity: quantity.toString(),
     });
 
-    await this.request(`/cart/add?${params}`, {
+    await this.request(`/api/cart/add?${params}`, {
       method: 'POST',
       body: personalizationDetails ? JSON.stringify(personalizationDetails) : undefined,
     });
@@ -263,7 +279,7 @@ class ApiClient {
       personalization
     };
 
-    await this.request('/cart/add-with-personalization', {
+    await this.request('/api/cart/add-with-personalization', {
       method: 'POST',
       body: JSON.stringify(requestBody),
     });
@@ -274,32 +290,32 @@ class ApiClient {
       quantity: quantity.toString(),
     });
 
-    await this.request(`/cart/update/${itemId}?${params}`, {
+    await this.request(`/api/cart/update/${itemId}?${params}`, {
       method: 'PUT',
     });
   }
 
   async removeFromCart(itemId: number): Promise<void> {
-    await this.request(`/cart/remove/${itemId}`, {
+    await this.request(`/api/cart/remove/${itemId}`, {
       method: 'DELETE',
     });
   }
 
   async clearCart(): Promise<void> {
-    await this.request('/cart/clear', {
+    await this.request('/api/cart/clear', {
       method: 'DELETE',
     });
   }
 
   async createNewCart(): Promise<void> {
-    await this.request('/cart/new', {
+    await this.request('/api/cart/new', {
       method: 'POST',
     });
   }
 
   // Order methods
   async checkout(checkoutData: CheckoutRequest): Promise<string> {
-    const response = await this.request<string | { message: string }>('/orders/checkout', {
+    const response = await this.request<string | { message: string }>('/api/orders/checkout', {
       method: 'POST',
       body: JSON.stringify(checkoutData),
     });
@@ -315,39 +331,39 @@ class ApiClient {
   }
 
   async getMyOrders(): Promise<OrderResponse[]> {
-    return this.request<OrderResponse[]>('/orders/my-orders');
+    return this.request<OrderResponse[]>('/api/orders/my-orders');
   }
 
   async getOrder(orderId: number): Promise<OrderResponse> {
-    return this.request<OrderResponse>(`/orders/${orderId}`);
+    return this.request<OrderResponse>(`/api/orders/${orderId}`);
   }
 
   // Member A - Product Catalog API Methods
 
   // Category methods
   async getCategories(): Promise<Category[]> {
-    return this.request<Category[]>('/categories');
+    return this.request<Category[]>('/api/categories');
   }
 
   async getCategory(categoryId: number): Promise<Category> {
-    return this.request<Category>(`/categories/${categoryId}`);
+    return this.request<Category>(`/api/categories/${categoryId}`);
   }
 
   async getCategoriesWithProducts(): Promise<Category[]> {
-    return this.request<Category[]>('/categories/with-products');
+    return this.request<Category[]>('/api/categories/with-products');
   }
 
   // Product methods
   async getProducts(): Promise<Product[]> {
-    return this.request<Product[]>('/products');
+    return this.request<Product[]>('/api/products');
   }
 
   async getProduct(productId: number): Promise<Product> {
-    return this.request<Product>(`/products/${productId}`);
+    return this.request<Product>(`/api/products/${productId}`);
   }
 
   async getProductsByCategory(categoryId: number): Promise<Product[]> {
-    return this.request<Product[]>(`/products/category/${categoryId}`);
+    return this.request<Product[]>(`/api/products/category/${categoryId}`);
   }
 
   async searchProducts(params: ProductSearchParams): Promise<Product[]> {
@@ -356,11 +372,11 @@ class ApiClient {
     if (params.page) searchParams.append('page', params.page.toString());
     if (params.size) searchParams.append('size', params.size.toString());
 
-    return this.request<Product[]>(`/products/search?${searchParams}`);
+    return this.request<Product[]>(`/api/products/search?${searchParams}`);
   }
 
   async getInStockProducts(): Promise<Product[]> {
-    return this.request<Product[]>('/products/in-stock');
+    return this.request<Product[]>('/api/products/in-stock');
   }
 
   async getProductsByPriceRange(params: PriceRangeParams): Promise<Product[]> {
@@ -370,7 +386,7 @@ class ApiClient {
     if (params.page) searchParams.append('page', params.page.toString());
     if (params.size) searchParams.append('size', params.size.toString());
 
-    return this.request<Product[]>(`/products/price-range?${searchParams}`);
+    return this.request<Product[]>(`/api/products/price-range?${searchParams}`);
   }
 
   async filterProducts(params: ProductFilterParams): Promise<Product[]> {
@@ -383,33 +399,33 @@ class ApiClient {
     if (params.page) searchParams.append('page', params.page.toString());
     if (params.size) searchParams.append('size', params.size.toString());
 
-    return this.request<Product[]>(`/products/filter?${searchParams}`);
+    return this.request<Product[]>(`/api/products/filter?${searchParams}`);
   }
 
   // Admin Category methods
   async createCategory(categoryData: CreateCategoryRequest): Promise<Category> {
-    return this.request<Category>('/categories/admin', {
+    return this.request<Category>('/api/categories/admin', {
       method: 'POST',
       body: JSON.stringify(categoryData),
     });
   }
 
   async updateCategory(categoryId: number, categoryData: UpdateCategoryRequest): Promise<Category> {
-    return this.request<Category>(`/categories/admin/${categoryId}`, {
+    return this.request<Category>(`/api/categories/admin/${categoryId}`, {
       method: 'PUT',
       body: JSON.stringify(categoryData),
     });
   }
 
   async deleteCategory(categoryId: number): Promise<void> {
-    await this.request<void>(`/categories/admin/${categoryId}`, {
+    await this.request<void>(`/api/categories/admin/${categoryId}`, {
       method: 'DELETE',
     });
   }
 
   // Admin Product methods
   async createProduct(productData: CreateProductRequest): Promise<Product> {
-    return this.request<Product>('/products/admin', {
+    return this.request<Product>('/api/products/admin', {
       method: 'POST',
       body: JSON.stringify(productData),
     });
@@ -417,33 +433,33 @@ class ApiClient {
 
   async updateProduct(productId: number, productData: UpdateProductRequest): Promise<Product> {
     console.log('🔄 API Client - Updating product:', productId, productData);
-    return this.request<Product>(`/products/admin/${productId}`, {
+    return this.request<Product>(`/api/products/admin/${productId}`, {
       method: 'PUT',
       body: JSON.stringify(productData),
     });
   }
 
   async deleteProduct(productId: number): Promise<void> {
-    await this.request<void>(`/products/admin/${productId}`, {
+    await this.request<void>(`/api/products/admin/${productId}`, {
       method: 'DELETE',
     });
   }
 
   async updateProductStock(productId: number, stock: number): Promise<Product> {
     const params = new URLSearchParams({ stock: stock.toString() });
-    return this.request<Product>(`/products/admin/${productId}/stock?${params}`, {
+    return this.request<Product>(`/api/products/admin/${productId}/stock?${params}`, {
       method: 'PUT',
     });
   }
 
   async getLowStockProducts(threshold: number = 10): Promise<Product[]> {
     const params = new URLSearchParams({ threshold: threshold.toString() });
-    return this.request<Product[]>(`/products/admin/low-stock?${params}`);
+    return this.request<Product[]>(`/api/products/admin/low-stock?${params}`);
   }
 
   // Dashboard methods
   async getDashboardStats(): Promise<AdminDashboardStatsDTO> {
-    return this.request<AdminDashboardStatsDTO>('/admin/dashboard/stats');
+    return this.request<AdminDashboardStatsDTO>('/api/admin/dashboard/stats');
   }
 
   async getSalesReport(startDate: string, endDate: string): Promise<SalesReportDTO[]> {
@@ -451,17 +467,17 @@ class ApiClient {
       startDate,
       endDate,
     });
-    return this.request<SalesReportDTO[]>(`/admin/dashboard/sales-report?${params}`);
+    return this.request<SalesReportDTO[]>(`/api/admin/dashboard/sales-report?${params}`);
   }
 
   async getTopSellingProducts(limit: number = 10): Promise<ProductSalesDTO[]> {
     const params = new URLSearchParams({ limit: limit.toString() });
-    return this.request<ProductSalesDTO[]>(`/admin/dashboard/top-products?${params}`);
+    return this.request<ProductSalesDTO[]>(`/api/admin/dashboard/top-products?${params}`);
   }
 
   async getRecentOrders(limit: number = 10): Promise<OrderSummaryDTO[]> {
     const params = new URLSearchParams({ limit: limit.toString() });
-    return this.request<OrderSummaryDTO[]>(`/admin/dashboard/recent-orders?${params}`);
+    return this.request<OrderSummaryDTO[]>(`/api/admin/dashboard/recent-orders?${params}`);
   }
 
   async getAllOrders(page: number = 0, size: number = 10): Promise<PaginatedOrderResponse> {
@@ -469,11 +485,11 @@ class ApiClient {
       page: page.toString(),
       size: size.toString(),
     });
-    return this.request<PaginatedOrderResponse>(`/orders/admin/all?${params}`);
+    return this.request<PaginatedOrderResponse>(`/api/orders/admin/all?${params}`);
   }
 
   async updateOrderStatus(orderId: number, status: string): Promise<void> {
-    return this.request(`/orders/admin/${orderId}/status`, {
+    return this.request(`/api/orders/admin/${orderId}/status`, {
       method: 'PUT',
       body: JSON.stringify({ status }),
     });
@@ -481,31 +497,31 @@ class ApiClient {
 
   // Personalization methods
   async getPersonalizationOptions(productId: number): Promise<any[]> {
-    return this.request<any[]>(`/personalization/products/${productId}/options`);
+    return this.request<any[]>(`/api/personalization/products/${productId}/options`);
   }
 
   async createPersonalizationOption(productId: number, optionData: any): Promise<any> {
-    return this.request<any>(`/personalization/products/${productId}/options`, {
+    return this.request<any>(`/api/personalization/products/${productId}/options`, {
       method: 'POST',
       body: JSON.stringify(optionData),
     });
   }
 
   async updatePersonalizationOption(optionId: number, optionData: any): Promise<any> {
-    return this.request<any>(`/personalization/options/${optionId}`, {
+    return this.request<any>(`/api/personalization/options/${optionId}`, {
       method: 'PUT',
       body: JSON.stringify(optionData),
     });
   }
 
   async deletePersonalizationOption(optionId: number): Promise<void> {
-    return this.request(`/personalization/options/${optionId}`, {
+    return this.request(`/api/personalization/options/${optionId}`, {
       method: 'DELETE',
     });
   }
 
   async addPersonalizedToCart(request: any): Promise<any> {
-    return this.request<any>('/personalization/add-to-cart', {
+    return this.request<any>('/api/personalization/add-to-cart', {
       method: 'POST',
       body: JSON.stringify(request),
     });

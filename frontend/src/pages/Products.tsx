@@ -7,6 +7,7 @@ import { SearchBar } from "@/components/SearchBar";
 import { PriceFilter } from "@/components/PriceFilter";
 import { SortSelect } from "@/components/SortSelect";
 import { Pagination } from "@/components/Pagination";
+import { Cart } from "@/components/Cart";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -36,6 +37,10 @@ const Products = () => {
   const [sortBy, setSortBy] = useState<"name" | "price" | "newest">("name");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [showFilters, setShowFilters] = useState(false);
+
+  // Cart state
+  const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -173,20 +178,23 @@ const Products = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
+      <Header
+        onCartClick={() => setIsCartOpen(true)}
+        onSearchClick={() => setIsSearchOpen(true)}
+      />
 
-      <div className="container max-w-screen-xl mx-auto px-4 py-8">
+      <div className="container max-w-screen-xl mx-auto px-4 py-6 sm:py-8">
         {/* Page Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Our Products</h1>
-          <p className="text-muted-foreground">
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-bold mb-2">Our Products</h1>
+          <p className="text-muted-foreground text-sm sm:text-base">
             Discover our collection of premium teddy bears and plush toys
           </p>
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-8">
-          {/* Sidebar Filters */}
-          <div className="lg:w-64 space-y-6">
+        <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
+          {/* Sidebar Filters - Hidden on mobile, shown on desktop */}
+          <div className="hidden lg:block lg:w-64 space-y-6">
             <Card>
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">
@@ -237,8 +245,8 @@ const Products = () => {
           {/* Main Content */}
           <div className="flex-1">
             {/* Toolbar */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-              <div className="flex items-center gap-4">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 mb-6">
+              <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
                 <Button
                   variant="outline"
                   size="sm"
@@ -249,8 +257,8 @@ const Products = () => {
                   Filters
                 </Button>
 
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
                     {sortedProducts.length} products
                   </span>
                   {selectedCategory && (
@@ -271,8 +279,10 @@ const Products = () => {
                 </div>
               </div>
 
-              <div className="flex items-center gap-4">
-                <SortSelect value={sortBy} onChange={handleSortChange} />
+              <div className="flex items-center gap-3 sm:gap-4 w-full sm:w-auto">
+                <div className="flex-1 sm:flex-none">
+                  <SortSelect value={sortBy} onChange={handleSortChange} />
+                </div>
 
                 <div className="flex border rounded-md">
                   <Button
@@ -298,7 +308,30 @@ const Products = () => {
             {/* Mobile Filters */}
             {showFilters && (
               <Card className="mb-6 lg:hidden">
-                <CardContent className="p-4 space-y-4">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base">Filters</CardTitle>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={clearFilters}
+                        className="text-xs h-8"
+                      >
+                        Clear All
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowFilters(false)}
+                        className="text-xs h-8"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-4 pt-0 space-y-4">
                   <SearchBar
                     value={searchQuery}
                     onChange={handleSearch}
@@ -365,6 +398,8 @@ const Products = () => {
           </div>
         </div>
       </div>
+
+      <Cart isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
     </div>
   );
 };

@@ -83,7 +83,7 @@ public class ProductService {
         product.setDescription(request.getDescription());
         product.setPrice(request.getPrice());
         product.setImageUrl(request.getImageUrl());
-        product.setStockQuantity(request.getStockQuantity());
+        product.setStockQuantity(request.getStockQuantity() != null ? request.getStockQuantity() : 0);
 
         product = productRepository.save(product);
         return convertToDTO(product);
@@ -103,7 +103,7 @@ public class ProductService {
         product.setDescription(request.getDescription());
         product.setPrice(request.getPrice());
         product.setImageUrl(request.getImageUrl());
-        product.setStockQuantity(request.getStockQuantity());
+        product.setStockQuantity(request.getStockQuantity() != null ? request.getStockQuantity() : 0);
 
         product = productRepository.save(product);
         return convertToDTO(product);
@@ -122,7 +122,7 @@ public class ProductService {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new RuntimeException("Product not found with id: " + productId));
 
-        product.setStockQuantity(newStock);
+        product.setStockQuantity(newStock != null ? newStock : 0);
         product = productRepository.save(product);
         return convertToDTO(product);
     }
@@ -172,7 +172,7 @@ public class ProductService {
         dto.setDescription(product.getDescription());
         dto.setPrice(product.getPrice());
         dto.setImageUrl(product.getImageUrl());
-        dto.setStockQuantity(product.getStockQuantity());
+        dto.setStockQuantity(product.getStockQuantity() != null ? product.getStockQuantity() : 0);
         dto.setInStock(product.isInStock());
         return dto;
     }

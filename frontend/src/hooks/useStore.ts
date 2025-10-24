@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { Product, UIProduct, CartItem, Order, Category, ProductFilterParams, PersonalizationDetails } from '@/types/product';
 import { apiClient, AuthResponse } from '@/lib/api';
-import { convertProductToUI, convertProductsToUI, convertCategoriesToUI, generateMockProducts, generateMockCategories } from '@/lib/product-utils';
+import { convertProductToUI, convertProductsToUI, convertCategoriesToUI } from '@/lib/product-utils';
 import { convertToNewFormat, calculateExtraCost } from '@/lib/personalization-utils';
 
 interface StoreState {
@@ -80,9 +80,7 @@ interface StoreState {
   getPosCartTotal: () => number;
 }
 
-// Mock data for fallback
-const mockProducts = generateMockProducts();
-const mockCategories = generateMockCategories();
+// No more mock data - we load real data from the API
 
 export const useStore = create<StoreState>()(
   persist(
@@ -105,9 +103,9 @@ export const useStore = create<StoreState>()(
           throw error;
         }
       },
-      register: async (name: string, email: string, password: string) => {
+      register: async (username: string, email: string, password: string) => {
         try {
-          const response = await apiClient.register({ name, email, password });
+          const response = await apiClient.register({ username, email, password });
           const userRole = response.role.toLowerCase() as 'customer' | 'admin' | 'cashier';
           set({ 
             currentUser: userRole, 
@@ -123,9 +121,9 @@ export const useStore = create<StoreState>()(
         set({ currentUser: null, userInfo: null, cart: [] });
       },
 
-      // Products
-      products: mockProducts,
-      categories: mockCategories,
+      // Products - start with empty arrays, load real data from API
+      products: [],
+      categories: [],
       setProducts: (products) => set({ products }),
       setCategories: (categories) => set({ categories }),
       addProduct: (product) => set((state) => ({ 
@@ -143,14 +141,17 @@ export const useStore = create<StoreState>()(
         try {
           console.log('🔄 Fetching products with filters:', filters);
           
-          // If no filters provided, get all products
+          // For customers, always use getProducts() to avoid 403 errors
+          // For admin users, use filterProducts if filters are provided
+          const { currentUser } = get();
           let backendResponse;
-          if (!filters || Object.keys(filters).length === 0) {
-            console.log('🔄 No filters provided, fetching all products');
-            backendResponse = await apiClient.getProducts();
-          } else {
-            console.log('🔄 Filters provided, using filterProducts');
+          
+          if (currentUser === 'admin' && filters && Object.keys(filters).length > 0) {
+            console.log('🔄 Admin user with filters, using filterProducts');
             backendResponse = await apiClient.filterProducts(filters);
+          } else {
+            console.log('🔄 Customer user or no filters, fetching all products');
+            backendResponse = await apiClient.getProducts();
           }
           
           console.log('✅ Backend response received:', backendResponse);
@@ -175,9 +176,9 @@ export const useStore = create<StoreState>()(
           console.log('✅ Products set in store:', uiProducts.length, 'products');
         } catch (error) {
           console.error('❌ Failed to fetch products:', error);
-          console.log('🔄 Falling back to mock data');
-          // Fallback to mock data
-          set({ products: mockProducts });
+          console.log('🔄 API failed, using empty array instead of mock data');
+          // Don't use mock data, keep empty array
+          set({ products: [] });
         }
       },
 
@@ -192,9 +193,9 @@ export const useStore = create<StoreState>()(
           console.log('✅ Categories set in store:', uiCategories.length, 'categories');
         } catch (error) {
           console.error('❌ Failed to fetch categories:', error);
-          console.log('🔄 Falling back to mock categories');
-          // Fallback to mock data
-          set({ categories: mockCategories });
+          console.log('🔄 API failed, using empty array instead of mock data');
+          // Don't use mock data, keep empty array
+          set({ categories: [] });
         }
       },
 
@@ -254,6 +255,17 @@ export const useStore = create<StoreState>()(
       addToCart: async (product, quantity = 1, personalizationDetails = null, extraPrice = 0) => {
         const { currentUser } = get();
         console.log('🔄 addToCart called:', { productId: product.id, quantity, currentUser, personalizationDetails, extraPrice });
+        console.log('🔄 Current user status:', currentUser ? 'Logged in as ' + currentUser.username : 'Not logged in');
+        console.log('🔄 Auth token:', localStorage.getItem('auth_token') ? 'Present' : 'Missing');
+        
+        // Require authentication for cart operations
+        if (!currentUser) {
+          console.error('❌ Cannot add to cart - user not authenticated');
+          alert('You must be logged in to add items to cart. Please log in first.');
+          throw new Error('You must be logged in to add items to cart. Please log in first.');
+        }
+        
+        console.log('✅ User authenticated, proceeding to add to cart');
         
         // Ensure personalization details are in the new format
         let normalizedPersonalizationDetails = personalizationDetails;
@@ -270,90 +282,42 @@ export const useStore = create<StoreState>()(
           quantity,
           personalizationDetails: normalizedPersonalizationDetails,
           extraPrice,
-          totalPrice: (product.price + extraPrice) * quantity
+          totalPrice: (product.price + extraPrice) * quantity,
+          // Ensure all required fields are present
+          description: product.description || '',
+          stock: product.stock || 999,
+          rating: product.rating || 0,
+          reviews: product.reviews || 0
         };
         
-        if (currentUser) {
-          try {
-            // Use the new API method if personalization details are provided
-            if (normalizedPersonalizationDetails && Object.keys(normalizedPersonalizationDetails).length > 0) {
-              await apiClient.addToCartWithPersonalization(
-                parseInt(product.id), 
-                quantity, 
-                normalizedPersonalizationDetails
-              );
-            } else {
-              await apiClient.addToCart(parseInt(product.id), quantity, normalizedPersonalizationDetails);
-            }
-            
-            // Instead of syncing, just add the item to local cart
-            // This prevents fetching old cart items
-            set((state) => {
-              const existingItem = state.cart.find(item => 
-                item.id === product.id && 
-                JSON.stringify(item.personalizationDetails) === JSON.stringify(normalizedPersonalizationDetails)
-              );
-              if (existingItem) {
-                return {
-                  cart: state.cart.map(item =>
-                    item.id === product.id && 
-                    JSON.stringify(item.personalizationDetails) === JSON.stringify(normalizedPersonalizationDetails)
-                      ? { 
-                          ...item, 
-                          quantity: item.quantity + quantity,
-                          totalPrice: (item.price + (item.extraPrice || 0)) * (item.quantity + quantity)
-                        }
-                      : item
-                  )
-                };
-              } else {
-                return {
-                  cart: [...state.cart, cartItem]
-                };
-              }
-            });
-            console.log('✅ Item added to local cart for authenticated user');
-          } catch (error) {
-            console.error('Failed to add to cart:', error);
-            // Fallback to local cart if API fails
-            set((state) => {
-              const existingItem = state.cart.find(item => 
-                item.id === product.id && 
-                JSON.stringify(item.personalizationDetails) === JSON.stringify(personalizationDetails)
-              );
-              if (existingItem) {
-                return {
-                  cart: state.cart.map(item =>
-                    item.id === product.id && 
-                    JSON.stringify(item.personalizationDetails) === JSON.stringify(personalizationDetails)
-                      ? { 
-                          ...item, 
-                          quantity: item.quantity + quantity,
-                          totalPrice: (item.price + (item.extraPrice || 0)) * (item.quantity + quantity)
-                        }
-                      : item
-                  )
-                };
-              } else {
-                return {
-                  cart: [...state.cart, cartItem]
-                };
-              }
-            });
+        try {
+          console.log('🔄 Calling backend API to add to cart...');
+          // Use the new API method if personalization details are provided
+          if (normalizedPersonalizationDetails && Object.keys(normalizedPersonalizationDetails).length > 0) {
+            console.log('🔄 Using addToCartWithPersonalization');
+            await apiClient.addToCartWithPersonalization(
+              parseInt(product.id), 
+              quantity, 
+              normalizedPersonalizationDetails
+            );
+          } else {
+            console.log('🔄 Using addToCart with productId:', parseInt(product.id), 'quantity:', quantity);
+            await apiClient.addToCart(parseInt(product.id), quantity, normalizedPersonalizationDetails);
           }
-        } else {
-          console.log('🔄 User not authenticated, adding to local cart');
-          // Local cart for non-authenticated users
+          console.log('✅ Backend API call successful');
+            
+          // Instead of syncing, just add the item to local cart
+          // This prevents fetching old cart items
           set((state) => {
             const existingItem = state.cart.find(item => 
               item.id === product.id && 
-              JSON.stringify(item.personalizationDetails) === JSON.stringify(personalizationDetails)
+              JSON.stringify(item.personalizationDetails) === JSON.stringify(normalizedPersonalizationDetails)
             );
             if (existingItem) {
               return {
                 cart: state.cart.map(item =>
                   item.id === product.id && 
-                  JSON.stringify(item.personalizationDetails) === JSON.stringify(personalizationDetails)
+                  JSON.stringify(item.personalizationDetails) === JSON.stringify(normalizedPersonalizationDetails)
                     ? { 
                         ...item, 
                         quantity: item.quantity + quantity,
@@ -368,47 +332,49 @@ export const useStore = create<StoreState>()(
               };
             }
           });
+          console.log('✅ Item added to cart successfully');
+          alert(`✅ ${product.name} added to cart!`);
+        } catch (error) {
+          console.error('❌ Failed to add to cart:', error);
+          alert(`❌ Failed to add to cart: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          throw error;
         }
       },
       removeFromCart: async (productId) => {
-        const { currentUser } = get();
+        const { currentUser, cart } = get();
         console.log('🔄 removeFromCart called:', { productId, currentUser });
+        console.log('🔄 Current cart items:', cart);
+        console.log('🔄 Looking for item with ID:', productId);
+        
+        // Find the cart item to get its backend ID
+        const cartItem = get().cart.find(item => item.id === productId);
+        console.log('🔄 Found cart item:', cartItem);
         
         if (currentUser) {
           try {
-            // Find the cart item to get its backend ID
-            const cartItem = get().cart.find(item => item.id === productId);
-            console.log('🔄 Found cart item:', cartItem);
-            
             if (cartItem && 'backendId' in cartItem && cartItem.backendId) {
               console.log('🔄 Using backend ID for removal:', cartItem.backendId);
               await apiClient.removeFromCart((cartItem as any).backendId);
-              // Remove from local cart instead of syncing
-              set((state) => ({
-                cart: state.cart.filter(item => item.id !== productId)
-              }));
-              console.log('✅ Item removed from local cart for authenticated user');
+              console.log('✅ Backend removal successful');
             } else {
-              console.log('🔄 No backendId found, removing locally');
-              // If no backendId, just remove locally
-              set((state) => ({
-                cart: state.cart.filter(item => item.id !== productId)
-              }));
+              console.log('🔄 No backendId found, skipping backend removal');
             }
           } catch (error) {
-            console.error('Failed to remove from cart:', error);
-            // Fallback to local removal
-            set((state) => ({
-              cart: state.cart.filter(item => item.id !== productId)
-            }));
+            console.error('Failed to remove from backend:', error);
+            console.log('🔄 Continuing with local removal despite backend error');
           }
-        } else {
-          console.log('🔄 User not authenticated, removing locally');
-          // For unauthenticated users, just remove locally
-          set((state) => ({
-            cart: state.cart.filter(item => item.id !== productId)
-          }));
         }
+        
+        // Always remove locally regardless of backend status
+        console.log('🔄 Removing item locally...');
+        set((state) => {
+          const newCart = state.cart.filter(item => item.id !== productId);
+          console.log('🔄 Cart before removal:', state.cart.length, 'items');
+          console.log('🔄 Cart after removal:', newCart.length, 'items');
+          console.log('🔄 Removed item ID:', productId);
+          return { cart: newCart };
+        });
+        console.log('✅ Item removed from cart successfully');
       },
       updateCartQuantity: async (productId, quantity) => {
         const { currentUser } = get();
@@ -587,6 +553,7 @@ export const useStore = create<StoreState>()(
           const frontendCart: CartItem[] = backendCart.map(item => ({
             id: item.productId.toString(),
             name: item.productName,
+            description: item.productName, // Use product name as description
             price: item.productPrice,
             quantity: item.quantity,
             image: item.imageUrl || '/placeholder.svg',
@@ -624,6 +591,7 @@ export const useStore = create<StoreState>()(
           const frontendCart: CartItem[] = backendCart.map(item => ({
             id: item.productId.toString(),
             name: item.productName,
+            description: item.productName, // Use product name as description
             price: item.productPrice,
             quantity: item.quantity,
             image: item.imageUrl || '/placeholder.svg',
@@ -672,6 +640,17 @@ export const useStore = create<StoreState>()(
         }
         
         try {
+          // Sync cart with backend before checkout to ensure we have the latest cart items
+          console.log('🔄 Syncing cart with backend before checkout...');
+          await get().syncCartWithBackend();
+          
+          // Check cart state after sync
+          const { cart } = get();
+          console.log('🔄 Cart state after sync:', cart.length, 'items');
+          if (cart.length === 0) {
+            throw new Error('Your cart is empty. Please add items to your cart before checkout.');
+          }
+          
           const result = await apiClient.checkout({
             deliveryAddress,
             contactNumber,

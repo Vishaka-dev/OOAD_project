@@ -32,9 +32,14 @@ public class OrderService {
 
     @Transactional
     public Order createOrder(User user, CheckoutRequestDTO request) {
-        List<CartItem> cartItems = cartService.getOrCreateCart(user).getCartItems();
+        Cart cart = cartService.getOrCreateCart(user);
+        List<CartItem> cartItems = cart.getCartItems();
 
-        if (cartItems.isEmpty()) {
+        System.out.println("🔄 Creating order for user: " + user.getUsername());
+        System.out.println("🔄 Cart ID: " + cart.getCartId());
+        System.out.println("🔄 Cart items: " + (cartItems != null ? cartItems.size() : "null"));
+
+        if (cartItems == null || cartItems.isEmpty()) {
             throw new RuntimeException("Cart is empty");
         }
 
@@ -76,11 +81,26 @@ public class OrderService {
             order.setStatus(Order.OrderStatus.Confirmed);
             orderRepository.save(order);
 
-            // Send confirmation email
-            emailService.sendOrderConfirmation(order);
+            // Send confirmation email (non-blocking - don't fail checkout if email fails)
+            try {
+                System.out.println("📧 Attempting to send order confirmation email...");
+                emailService.sendOrderConfirmation(order);
+                System.out.println("✅ Order confirmation email sent successfully");
+            } catch (Exception e) {
+                System.err.println("⚠️ Failed to send order confirmation email: " + e.getMessage());
+                System.err.println("⚠️ Order was still created successfully - email failure is non-critical");
+                // Log but don't throw - email failure should not prevent checkout
+            }
 
-            // Send comprehensive order summary to both customer and admin
-            emailService.sendOrderSummary(order);
+            // Send comprehensive order summary to both customer and admin (non-blocking)
+            try {
+                System.out.println("📧 Attempting to send order summary email...");
+                emailService.sendOrderSummary(order);
+                System.out.println("✅ Order summary email sent successfully");
+            } catch (Exception e) {
+                System.err.println("⚠️ Failed to send order summary email: " + e.getMessage());
+                // Log but don't throw - email failure should not prevent checkout
+            }
         }
 
         // Always clear the user's cart after an order is created to avoid stale cart

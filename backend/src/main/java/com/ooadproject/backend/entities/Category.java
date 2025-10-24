@@ -29,7 +29,7 @@ public class Category {
     @Size(max = 500, message = "Description must not exceed 500 characters")
     private String description;
 
-    @OneToMany(mappedBy = "category", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "category", fetch = FetchType.LAZY)
     @JsonIgnore
     private List<Product> products;
 

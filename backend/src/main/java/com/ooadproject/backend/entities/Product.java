@@ -44,13 +44,13 @@ public class Product {
 
     @Column(columnDefinition = "INT DEFAULT 0")
     @Min(value = 0, message = "Stock quantity cannot be negative")
-    private Integer stockQuantity = 0;
+    private Integer stockQuantity;
 
-    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "product", fetch = FetchType.LAZY)
     @JsonIgnore
     private List<OrderItem> orderItems;
 
-    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "product", fetch = FetchType.LAZY)
     @JsonIgnore
     private List<CartItem> cartItems;
 
@@ -61,5 +61,14 @@ public class Product {
 
     public boolean isAvailable() {
         return isInStock();
+    }
+
+    // Ensure stockQuantity is never null
+    public Integer getStockQuantity() {
+        return stockQuantity != null ? stockQuantity : 0;
+    }
+
+    public void setStockQuantity(Integer stockQuantity) {
+        this.stockQuantity = stockQuantity != null ? stockQuantity : 0;
     }
 }

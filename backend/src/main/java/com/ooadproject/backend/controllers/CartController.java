@@ -3,6 +3,7 @@ package com.ooadproject.backend.controllers;
 import com.ooadproject.backend.dto.AddToCartRequest;
 import com.ooadproject.backend.dto.CartItemDTO;
 import com.ooadproject.backend.dto.PersonalizationDTO;
+import com.ooadproject.backend.entities.CartItem;
 import com.ooadproject.backend.entities.User;
 import com.ooadproject.backend.services.CartService;
 import com.ooadproject.backend.services.UserService;
@@ -26,13 +27,24 @@ public class CartController {
 
     @GetMapping
     public ResponseEntity<List<CartItemDTO>> getCartItems(Authentication authentication) {
+        System.out.println("📥 CartController.getCartItems called");
+        System.out.println("📥 Authentication: " + (authentication != null ? authentication.getName() : "null"));
+
         User user = null;
         if (authentication != null) {
             user = userService.findByUsername(authentication.getName())
                     .orElse(null);
+            System.out.println("📥 User found: "
+                    + (user != null ? user.getUsername() + " (ID: " + user.getUserId() + ")" : "null"));
         }
 
         List<CartItemDTO> items = cartService.getCartItems(user);
+        System.out.println("📥 Cart items retrieved: " + (items != null ? items.size() : "null") + " items");
+        if (items != null && !items.isEmpty()) {
+            items.forEach(item -> System.out.println("  - Item ID: " + item.getItemId() + ", Product: "
+                    + item.getProductName() + ", Qty: " + item.getQuantity()));
+        }
+
         return ResponseEntity.ok(items);
     }
 
@@ -72,18 +84,27 @@ public class CartController {
             @RequestBody(required = false) PersonalizationDTO personalizationDTO,
             Authentication authentication) {
         try {
+            System.out.println("📥 CartController.addToCart - productId: " + productId + ", quantity: " + quantity);
+            System.out.println("📥 Authentication: " + (authentication != null ? authentication.getName() : "null"));
+
             User user = null;
             if (authentication != null) {
                 user = userService.findByUsername(authentication.getName())
                         .orElseThrow(() -> new RuntimeException("User not found"));
+                System.out.println("📥 User found: " + user.getUsername() + " (ID: " + user.getUserId() + ")");
             }
             // For now, allow unauthenticated users to add to cart
             // In a real app, you might want to use session-based cart or require
             // authentication
 
-            cartService.addToCart(user, productId, quantity, personalizationDTO);
+            CartItem savedItem = cartService.addToCart(user, productId, quantity, personalizationDTO);
+            System.out.println("✅ CartController - CartItem saved with ID: "
+                    + (savedItem != null ? savedItem.getItemId() : "null"));
+
             return ResponseEntity.ok(Map.of("message", "Item added to cart successfully"));
         } catch (Exception e) {
+            System.err.println("❌ CartController.addToCart error: " + e.getMessage());
+            e.printStackTrace();
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }

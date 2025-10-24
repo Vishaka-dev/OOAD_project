@@ -42,7 +42,7 @@ public class CartService {
             cart.setUser(null); // Allow null user for temporary carts
             return cartRepository.save(cart);
         }
-        return cartRepository.findByUser(user)
+        return cartRepository.findByUserWithCartItems(user)
                 .orElseGet(() -> {
                     Cart cart = new Cart();
                     cart.setUser(user);
@@ -53,6 +53,9 @@ public class CartService {
     @Transactional
     public CartItem addToCart(User user, Integer productId, Integer quantity,
             PersonalizationDTO personalizationDTO) {
+        System.out.println("🔄 addToCart called for user: " + (user != null ? user.getUsername() : "null")
+                + ", productId: " + productId + ", quantity: " + quantity);
+
         if (user == null) {
             // For unauthenticated users, use a default session ID
             String sessionId = "anonymous";
@@ -60,8 +63,11 @@ public class CartService {
         }
 
         Cart cart = getOrCreateCart(user);
+        System.out.println("🔄 Got cart: " + cart.getCartId() + " for user: " + user.getUsername());
+
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new RuntimeException("Product not found"));
+        System.out.println("🔄 Found product: " + product.getName() + ", stock: " + product.getStockQuantity());
 
         if (product.getStockQuantity() < quantity) {
             throw new RuntimeException("Insufficient stock");
@@ -83,16 +89,38 @@ public class CartService {
 
         if (existingItem.isPresent()) {
             CartItem item = existingItem.get();
+            System.out.println("🔄 Updating existing cart item: " + item.getItemId());
             item.setQuantity(item.getQuantity() + quantity);
             item.setPersonalizationDetails(personalizationMap);
-            return cartItemRepository.save(item);
+            CartItem savedItem = cartItemRepository.save(item);
+            cartItemRepository.flush();
+            System.out.println(
+                    "✅ Updated cart item: " + savedItem.getItemId() + ", new quantity: " + savedItem.getQuantity());
+            return savedItem;
         } else {
             CartItem newItem = new CartItem();
             newItem.setCart(cart);
             newItem.setProduct(product);
             newItem.setQuantity(quantity);
             newItem.setPersonalizationDetails(personalizationMap);
-            return cartItemRepository.save(newItem);
+
+            System.out.println("🔄 Creating new cart item for cart: " + cart.getCartId() + ", product: "
+                    + product.getProductId() + ", quantity: " + quantity);
+            CartItem savedItem = cartItemRepository.save(newItem);
+            cartItemRepository.flush();
+            System.out.println("✅ Created cart item: " + savedItem.getItemId() + " in database");
+
+            // Verify the item was actually saved
+            Optional<CartItem> verifyItem = cartItemRepository.findById(savedItem.getItemId());
+            System.out.println("🔍 Verification - Item exists in DB: " + verifyItem.isPresent());
+            if (verifyItem.isPresent()) {
+                System.out.println("🔍 Verified cart item: ID=" + verifyItem.get().getItemId()
+                        + ", Cart ID=" + verifyItem.get().getCart().getCartId()
+                        + ", Product ID=" + verifyItem.get().getProduct().getProductId()
+                        + ", Quantity=" + verifyItem.get().getQuantity());
+            }
+
+            return savedItem;
         }
     }
 
@@ -257,10 +285,25 @@ public class CartService {
             return items;
         }
 
+        System.out.println("🔄 Getting cart items for user: " + user.getUsername());
         Cart cart = getOrCreateCart(user);
-        return cart.getCartItems().stream()
+        System.out.println("🔄 Cart ID: " + cart.getCartId());
+
+        // Explicitly fetch cart items from database
+        List<CartItem> cartItems = cartItemRepository.findByCart(cart);
+        System.out.println("🔄 Found " + cartItems.size() + " cart items in database");
+
+        if (cartItems.isEmpty()) {
+            System.out.println("⚠️ WARNING: No cart items found in database for cart ID: " + cart.getCartId());
+            System.out.println("⚠️ Checking if cart exists in carts table...");
+        }
+
+        List<CartItemDTO> dtoList = cartItems.stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
+
+        System.out.println("🔄 Returning " + dtoList.size() + " cart items");
+        return dtoList;
     }
 
     public BigDecimal getCartTotal(User user) {

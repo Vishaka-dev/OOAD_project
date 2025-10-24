@@ -1,24 +1,24 @@
 -- Users Table (Member C)
 CREATE TABLE users (
-    user_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id SERIAL PRIMARY KEY,
     username VARCHAR(50) UNIQUE NOT NULL,
     email VARCHAR(100) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
-    role ENUM('customer', 'admin') NOT NULL,
+    role VARCHAR(20) NOT NULL CHECK (role IN ('customer', 'admin')),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Categories Table (Member A)
 CREATE TABLE categories (
-    category_id INT AUTO_INCREMENT PRIMARY KEY,
+    category_id SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     description TEXT
 );
 
 -- Products Table (Member A)
 CREATE TABLE products (
-    product_id INT AUTO_INCREMENT PRIMARY KEY,
+    product_id SERIAL PRIMARY KEY,
     category_id INT,
     name VARCHAR(100) NOT NULL,
     description TEXT,

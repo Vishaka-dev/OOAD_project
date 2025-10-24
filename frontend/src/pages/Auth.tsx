@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,6 +14,7 @@ const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const { login, register } = useStore();
+  const navigate = useNavigate();
 
   const [loginData, setLoginData] = useState({
     username: "",
@@ -38,8 +40,15 @@ const Auth = () => {
         description: "Welcome back to TeddyLove.",
       });
 
-      // Navigate back or to dashboard
-      window.history.back();
+      // Navigate based on user role
+      const { currentUser } = useStore.getState();
+      if (currentUser === "admin") {
+        navigate("/admin");
+      } else if (currentUser === "cashier") {
+        navigate("/admin"); // Cashiers can also access admin dashboard
+      } else {
+        navigate("/"); // Customers go to home page
+      }
     } catch (error) {
       toast({
         title: "Login failed",
@@ -66,15 +75,26 @@ const Auth = () => {
     setIsLoading(true);
 
     try {
-      await register(signupData.username, signupData.email, signupData.password);
+      await register(
+        signupData.username,
+        signupData.email,
+        signupData.password
+      );
 
       toast({
         title: "Account created!",
         description: "Welcome to TeddyLove. You can now start shopping.",
       });
 
-      // Navigate back or to dashboard
-      window.history.back();
+      // Navigate based on user role
+      const { currentUser } = useStore.getState();
+      if (currentUser === "admin") {
+        navigate("/admin");
+      } else if (currentUser === "cashier") {
+        navigate("/admin"); // Cashiers can also access admin dashboard
+      } else {
+        navigate("/"); // Customers go to home page
+      }
     } catch (error) {
       toast({
         title: "Signup failed",
@@ -90,11 +110,7 @@ const Auth = () => {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md space-y-6">
         {/* Back Button */}
-        <Button
-          variant="ghost"
-          onClick={() => window.history.back()}
-          className="mb-4"
-        >
+        <Button variant="ghost" onClick={() => navigate("/")} className="mb-4">
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Shop
         </Button>
@@ -192,12 +208,14 @@ const Auth = () => {
                       placeholder="Enter a username"
                       value={signupData.username}
                       onChange={(e) =>
-                        setSignupData((prev) => ({ ...prev, username: e.target.value }))
+                        setSignupData((prev) => ({
+                          ...prev,
+                          username: e.target.value,
+                        }))
                       }
                       required
                     />
                   </div>
-
 
                   <div className="space-y-2">
                     <Label htmlFor="signup-email">Email</Label>

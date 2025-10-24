@@ -62,60 +62,76 @@ export function ProductCard({ product, onViewDetails }: ProductCardProps) {
   const originalPrice =
     "originalPrice" in product ? product.originalPrice : undefined;
 
-  const handleAddToCart = (e: React.MouseEvent) => {
+  const handleAddToCart = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    // Convert to UIProduct format for the store
-    const uiProduct: UIProduct = {
-      id: productId.toString(),
-      name: productName,
-      description: productDescription,
-      price: productPrice,
-      originalPrice: originalPrice,
-      image: productImage,
-      category: productCategory,
-      size: productSize,
-      stock: productStock,
-      rating: productRating,
-      reviews: productReviews,
-    };
-    addToCart(uiProduct, 1);
+    try {
+      // Convert to UIProduct format for the store
+      const uiProduct: UIProduct = {
+        id: productId.toString(),
+        name: productName,
+        description: productDescription,
+        price: productPrice,
+        originalPrice: originalPrice,
+        image: productImage,
+        category: productCategory,
+        size: productSize,
+        stock: productStock,
+        rating: productRating,
+        reviews: productReviews,
+      };
+      await addToCart(uiProduct, 1);
+    } catch (error) {
+      // Show error message to user
+      alert(
+        error instanceof Error ? error.message : "Failed to add item to cart"
+      );
+    }
   };
 
   const handleViewDetails = () => {
     onViewDetails?.(product);
   };
 
-  const handlePersonalizedAdd = () => {
+  const handlePersonalizedAdd = async () => {
     if (Object.keys(details).length === 0) {
       alert("Please select at least one personalization option");
       return;
     }
 
-    // Convert to UIProduct format for the store
-    const uiProduct: UIProduct = {
-      id: productId.toString(),
-      name: productName,
-      description: productDescription,
-      price: productPrice,
-      originalPrice: originalPrice,
-      image: productImage,
-      category: productCategory,
-      size: productSize,
-      stock: productStock,
-      rating: productRating,
-      reviews: productReviews,
-    };
+    try {
+      // Convert to UIProduct format for the store
+      const uiProduct: UIProduct = {
+        id: productId.toString(),
+        name: productName,
+        description: productDescription,
+        price: productPrice,
+        originalPrice: originalPrice,
+        image: productImage,
+        category: productCategory,
+        size: productSize,
+        stock: productStock,
+        rating: productRating,
+        reviews: productReviews,
+      };
 
-    // Convert legacy format to new JSON structure
-    const newFormatDetails = convertToNewFormat(details);
+      // Convert legacy format to new JSON structure
+      const newFormatDetails = convertToNewFormat(details);
 
-    // Calculate extra price using the new structure
-    const extraPrice = calculateExtraCost(newFormatDetails);
+      // Calculate extra price using the new structure
+      const extraPrice = calculateExtraCost(newFormatDetails);
 
-    addToCart(uiProduct, quantity, newFormatDetails, extraPrice);
-    setOpen(false);
-    setQuantity(1);
-    setDetails({});
+      await addToCart(uiProduct, quantity, newFormatDetails, extraPrice);
+      setOpen(false);
+      setQuantity(1);
+      setDetails({});
+    } catch (error) {
+      // Show error message to user
+      alert(
+        error instanceof Error
+          ? error.message
+          : "Failed to add personalized item to cart"
+      );
+    }
   };
 
   useEffect(() => {
@@ -182,12 +198,12 @@ export function ProductCard({ product, onViewDetails }: ProductCardProps) {
         )}
       </div>
 
-      <CardContent className="p-3" onClick={handleViewDetails}>
+      <CardContent className="p-3 sm:p-4" onClick={handleViewDetails}>
         <div className="space-y-1.5">
-          <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors">
+          <h3 className="text-sm sm:text-base font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-1">
             {productName}
           </h3>
-          <p className="text-sm text-muted-foreground line-clamp-2">
+          <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2">
             {productDescription}
           </p>
 
@@ -208,11 +224,11 @@ export function ProductCard({ product, onViewDetails }: ProductCardProps) {
           </div>
 
           <div className="flex items-center space-x-2">
-            <span className="text-lg font-bold text-foreground">
+            <span className="text-base sm:text-lg font-bold text-foreground">
               Rs {productPrice.toFixed(2)}
             </span>
             {originalPrice && (
-              <span className="text-sm text-muted-foreground line-through">
+              <span className="text-xs sm:text-sm text-muted-foreground line-through">
                 Rs {originalPrice.toFixed(2)}
               </span>
             )}
@@ -222,16 +238,19 @@ export function ProductCard({ product, onViewDetails }: ProductCardProps) {
             <Badge variant="outline" className="text-xs px-1.5 py-0.5">
               {productSize}
             </Badge>
-            <Badge variant="outline" className="text-xs px-1.5 py-0.5">
+            <Badge
+              variant="outline"
+              className="text-xs px-1.5 py-0.5 truncate max-w-[100px]"
+            >
               {productCategory}
             </Badge>
           </div>
         </div>
       </CardContent>
 
-      <CardFooter className="p-3 pt-0 flex gap-2">
+      <CardFooter className="p-2 sm:p-3 pt-0 flex flex-col sm:flex-row gap-2">
         <Button
-          className="flex-1 text-xs"
+          className="w-full sm:flex-1 text-xs sm:text-sm h-8 sm:h-9"
           variant={productStock === 0 ? "outline" : "teddy"}
           disabled={productStock === 0}
           onClick={handleAddToCart}
@@ -244,7 +263,7 @@ export function ProductCard({ product, onViewDetails }: ProductCardProps) {
           <DialogTrigger asChild>
             <Button
               variant="outline"
-              className="flex-1 text-xs"
+              className="w-full sm:flex-1 text-xs sm:text-sm h-8 sm:h-9"
               disabled={productStock === 0}
               onClick={handleOpenPersonalize}
               size="sm"
@@ -255,11 +274,14 @@ export function ProductCard({ product, onViewDetails }: ProductCardProps) {
           <DialogContent
             aria-describedby={undefined}
             onClick={(e) => e.stopPropagation()}
+            className="max-w-[95vw] sm:max-w-lg max-h-[90vh] overflow-y-auto"
           >
             <DialogHeader>
-              <DialogTitle>Personalize {productName}</DialogTitle>
+              <DialogTitle className="text-base sm:text-lg">
+                Personalize {productName}
+              </DialogTitle>
             </DialogHeader>
-            <div className="grid gap-4 py-2">
+            <div className="grid gap-3 sm:gap-4 py-2">
               {/* Example: fetched options preview (optional) */}
               {loadingOptions ? (
                 <div className="text-sm text-muted-foreground">
@@ -274,9 +296,11 @@ export function ProductCard({ product, onViewDetails }: ProductCardProps) {
                     .join(", ")}
                 </div>
               ) : null}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div className="space-y-2">
-                  <label className="text-sm">Occasion</label>
+                  <label className="text-xs sm:text-sm font-medium">
+                    Occasion
+                  </label>
                   <Select
                     onValueChange={(v) =>
                       setDetails((d: PersonalizationDetails) => ({
@@ -303,7 +327,9 @@ export function ProductCard({ product, onViewDetails }: ProductCardProps) {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm">Flowers</label>
+                  <label className="text-xs sm:text-sm font-medium">
+                    Flowers
+                  </label>
                   <Select
                     onValueChange={(v) =>
                       setDetails((d: PersonalizationDetails) => ({
@@ -323,9 +349,11 @@ export function ProductCard({ product, onViewDetails }: ProductCardProps) {
                   </Select>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div className="space-y-2">
-                  <label className="text-sm">Flowers color</label>
+                  <label className="text-xs sm:text-sm font-medium">
+                    Flowers color
+                  </label>
                   <Select
                     onValueChange={(v) =>
                       setDetails((d: PersonalizationDetails) => ({
@@ -347,7 +375,9 @@ export function ProductCard({ product, onViewDetails }: ProductCardProps) {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm">Wrapping Paper</label>
+                  <label className="text-xs sm:text-sm font-medium">
+                    Wrapping Paper
+                  </label>
                   <Select
                     onValueChange={(v) =>
                       setDetails((d: PersonalizationDetails) => ({
@@ -366,9 +396,11 @@ export function ProductCard({ product, onViewDetails }: ProductCardProps) {
                   </Select>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div className="space-y-2">
-                  <label className="text-sm">Include Teddy</label>
+                  <label className="text-xs sm:text-sm font-medium">
+                    Include Teddy
+                  </label>
                   <Select
                     onValueChange={(v) =>
                       setDetails((d: PersonalizationDetails) => ({
@@ -387,7 +419,9 @@ export function ProductCard({ product, onViewDetails }: ProductCardProps) {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm">Teddy Type</label>
+                  <label className="text-xs sm:text-sm font-medium">
+                    Teddy Type
+                  </label>
                   <Select
                     onValueChange={(v) =>
                       setDetails((d: PersonalizationDetails) => ({
@@ -410,9 +444,11 @@ export function ProductCard({ product, onViewDetails }: ProductCardProps) {
                   </Select>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div className="space-y-2">
-                  <label className="text-sm">Teddy Color</label>
+                  <label className="text-xs sm:text-sm font-medium">
+                    Teddy Color
+                  </label>
                   <Select
                     onValueChange={(v) =>
                       setDetails((d: PersonalizationDetails) => ({
@@ -435,9 +471,12 @@ export function ProductCard({ product, onViewDetails }: ProductCardProps) {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm">Felt Design (Teddy)</label>
+                  <label className="text-xs sm:text-sm font-medium">
+                    Felt Design (Teddy)
+                  </label>
                   <Input
                     placeholder="Describe felt design"
+                    className="text-sm"
                     onChange={(e) =>
                       setDetails((d: PersonalizationDetails) => ({
                         ...d,
@@ -447,9 +486,11 @@ export function ProductCard({ product, onViewDetails }: ProductCardProps) {
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div className="space-y-2">
-                  <label className="text-sm">Soft toys</label>
+                  <label className="text-xs sm:text-sm font-medium">
+                    Soft toys
+                  </label>
                   <Select
                     onValueChange={(v) =>
                       setDetails((d: PersonalizationDetails) => ({
@@ -468,22 +509,32 @@ export function ProductCard({ product, onViewDetails }: ProductCardProps) {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm">Quantity</label>
+                  <label className="text-xs sm:text-sm font-medium">
+                    Quantity
+                  </label>
                   <Input
                     type="number"
                     min={1}
                     value={quantity}
+                    className="text-sm"
                     onChange={(e) =>
                       setQuantity(parseInt(e.target.value || "1"))
                     }
                   />
                 </div>
               </div>
-              <div className="flex justify-end gap-2 pt-2">
-                <Button variant="outline" onClick={() => setOpen(false)}>
+              <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setOpen(false)}
+                  className="w-full sm:w-auto"
+                >
                   Cancel
                 </Button>
-                <Button onClick={handlePersonalizedAdd}>
+                <Button
+                  onClick={handlePersonalizedAdd}
+                  className="w-full sm:w-auto"
+                >
                   Add Personalized
                 </Button>
               </div>

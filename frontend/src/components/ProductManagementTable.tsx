@@ -150,7 +150,7 @@ export function ProductManagementTable({
       const token = localStorage.getItem("auth_token");
 
       const response = await fetch(
-        "http://localhost:8081/api/upload/product-image",
+        "https://backend-production-8f5c.up.railway.app/api/upload/product-image",
         {
           method: "POST",
           headers: {
@@ -210,7 +210,9 @@ export function ProductManagementTable({
           });
           return;
         }
-        imageUrl = `http://localhost:8081${uploadedUrl}`;
+        // Use the relative URL returned by the backend (e.g., /uploads/products/uuid.jpg)
+        // The frontend will automatically prepend the backend URL when displaying
+        imageUrl = uploadedUrl;
       }
 
       const productData = {

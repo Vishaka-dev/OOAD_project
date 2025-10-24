@@ -8,12 +8,12 @@ CREATE TABLE inventory (
 
 -- Delivery Slots Table (Member D)
 CREATE TABLE delivery_slots (
-    slot_id INT AUTO_INCREMENT PRIMARY KEY,
+    slot_id SERIAL PRIMARY KEY,
     order_id INT,
     delivery_date DATE NOT NULL,
     time_slot VARCHAR(50),
     courier_name VARCHAR(100),
-    status ENUM('pending', 'assigned', 'in_transit', 'delivered') DEFAULT 'pending',
+    status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'assigned', 'in_transit', 'delivered')),
     FOREIGN KEY (order_id) REFERENCES orders(order_id) ON DELETE CASCADE
 );
 

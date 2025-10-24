@@ -1,0 +1,15 @@
+[phases.setup]
+packages = ["jdk17", "maven"]
+
+[phases.install]
+cmds = [
+  "mvn -B -DskipTests dependency:go-offline"
+]
+
+[phases.build]
+cmds = [
+  "mvn -B -DskipTests clean package"
+]
+
+[start]
+cmd = "java -Dserver.port=$PORT -jar target/backend-0.0.1-SNAPSHOT.jar"

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,7 +27,7 @@ interface OrderItem {
   quantity: number;
   price: number;
   itemTotal: number;
-  personalizationDetails?: any;
+  personalizationDetails?: Record<string, unknown>;
 }
 
 interface Order {
@@ -49,47 +49,137 @@ const Profile = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [expandedOrderId, setExpandedOrderId] = useState<number | null>(null);
 
-  useEffect(() => {
-    // Redirect if not logged in
-    if (!currentUser || currentUser !== "customer") {
-      navigate("/auth");
-      return;
+  // Helper function to safely get personalization details
+  const getPersonalizationDetails = (details: Record<string, unknown>) => {
+    const result: string[] = [];
+
+    // Debug: Log the actual structure
+    console.log("🔍 Personalization details structure:", details);
+
+    if (details.occasion) {
+      result.push(`• Occasion: ${String(details.occasion)}`);
     }
 
-    loadOrders();
-  }, [currentUser, navigate]);
+    // Check for teddy bear details (new structure)
+    if (
+      details.teddy &&
+      typeof details.teddy === "object" &&
+      details.teddy !== null
+    ) {
+      const teddy = details.teddy as Record<string, unknown>;
+      if (teddy.included) {
+        const type = teddy.type ? String(teddy.type) : "Bear";
+        const color = teddy.color ? ` (${String(teddy.color)})` : "";
+        result.push(`• Teddy: ${type}${color}`);
+      }
+    }
 
-  const loadOrders = async () => {
+    // Check for flower details (new structure)
+    if (
+      details.flowers &&
+      typeof details.flowers === "object" &&
+      details.flowers !== null
+    ) {
+      const flowers = details.flowers as Record<string, unknown>;
+      if (flowers.count && Number(flowers.count) > 0) {
+        const count = String(flowers.count);
+        const color = flowers.color ? ` (${String(flowers.color)})` : "";
+        result.push(`• Flowers: ${count} flowers${color}`);
+      }
+    }
+
+    // Check for wrapping paper
+    if (details.wrapping_paper) {
+      result.push(`• Wrapping Paper: ${String(details.wrapping_paper)}`);
+    }
+
+    // Check for soft toys
+    if (details.soft_toys) {
+      result.push(`• Soft Toys: ${String(details.soft_toys)}`);
+    }
+
+    // Check for felt design
+    if (details.felt_design) {
+      result.push(`• Felt Design: ${String(details.felt_design)}`);
+    }
+
+    // Check for custom message
+    if (details.custom_message) {
+      result.push(`• Message: "${String(details.custom_message)}"`);
+    }
+
+    // Check for extra cost
+    if (details.extra_cost && Number(details.extra_cost) > 0) {
+      result.push(`• Extra Cost: Rs ${Number(details.extra_cost).toFixed(2)}`);
+    }
+
+    // Legacy field support
+    if (details.wrappingPaper) {
+      result.push(`• Wrapping Paper: ${String(details.wrappingPaper)}`);
+    }
+
+    if (details.softToys) {
+      result.push(`• Soft Toys: ${String(details.softToys)}`);
+    }
+
+    if (details.massage) {
+      result.push(`• Message: "${String(details.massage)}"`);
+    }
+
+    return result;
+  };
+
+  const loadOrders = useCallback(async () => {
     try {
       setIsLoading(true);
-      const token = localStorage.getItem("auth_token");
+      console.log("🔄 Loading orders using API client...");
 
-      const response = await fetch(
-        "http://localhost:8081/api/orders/my-orders",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      const data = await apiClient.getMyOrders();
+      console.log("✅ Orders loaded successfully:", data);
 
-      if (!response.ok) {
-        throw new Error("Failed to fetch orders");
+      // Handle case where API returns null, undefined, or non-array
+      if (Array.isArray(data)) {
+        setOrders(data);
+      } else {
+        console.log("⚠️ API returned non-array data, setting empty array");
+        setOrders([]);
       }
-
-      const data = await response.json();
-      setOrders(data);
     } catch (error) {
-      console.error("Failed to load orders:", error);
+      console.error("❌ Failed to load orders:", error);
       toast({
         title: "Error",
-        description: "Failed to load order history.",
+        description: `Failed to load order history: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
         variant: "destructive",
       });
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    // Redirect if not logged in
+    if (!currentUser || currentUser !== "customer") {
+      console.log(
+        "🔄 User not authenticated, redirecting to auth:",
+        currentUser
+      );
+      navigate("/auth");
+      return;
+    }
+
+    // Check if auth token exists
+    const token = localStorage.getItem("auth_token");
+    if (!token) {
+      console.log("🔄 No auth token found, redirecting to auth");
+      navigate("/auth");
+      return;
+    }
+
+    console.log("🔄 User authenticated, loading orders for:", currentUser);
+    loadOrders();
+  }, [currentUser, navigate, loadOrders]);
 
   const getStatusIcon = (status: string) => {
     switch (status.toLowerCase()) {
@@ -132,34 +222,38 @@ const Profile = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
+      <Header onCartClick={() => {}} onSearchClick={() => {}} />
 
-      <div className="container max-w-6xl mx-auto px-4 py-8">
+      <div className="container max-w-6xl mx-auto px-4 py-6 sm:py-8">
         {/* Back Button */}
-        <Button variant="ghost" onClick={() => navigate("/")} className="mb-6">
+        <Button
+          variant="ghost"
+          onClick={() => navigate("/")}
+          className="mb-4 sm:mb-6 -ml-2 sm:-ml-0"
+        >
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Home
         </Button>
 
         {/* Page Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">My Account</h1>
-          <p className="text-muted-foreground">
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-bold mb-2">My Account</h1>
+          <p className="text-muted-foreground text-sm sm:text-base">
             Manage your account and view your order history
           </p>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-3">
+        <div className="grid gap-4 sm:gap-6 md:grid-cols-3">
           {/* Account Information Card */}
           <div className="md:col-span-1">
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <User className="h-5 w-5" />
+              <CardHeader className="pb-3 sm:pb-6">
+                <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                  <User className="h-4 w-4 sm:h-5 sm:w-5" />
                   Account Information
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-3 sm:space-y-4">
                 <div>
                   <p className="text-sm text-muted-foreground">Username</p>
                   <p className="font-medium">{userInfo?.username || "N/A"}</p>
@@ -191,10 +285,10 @@ const Profile = () => {
             </Card>
 
             {/* Order Summary Card */}
-            <Card className="mt-6">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <ShoppingBag className="h-5 w-5" />
+            <Card className="mt-4 sm:mt-6">
+              <CardHeader className="pb-3 sm:pb-6">
+                <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                  <ShoppingBag className="h-4 w-4 sm:h-5 sm:w-5" />
                   Order Summary
                 </CardTitle>
               </CardHeader>
@@ -238,13 +332,13 @@ const Profile = () => {
           {/* Order History */}
           <div className="md:col-span-2">
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Package className="h-5 w-5" />
+              <CardHeader className="pb-3 sm:pb-6">
+                <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                  <Package className="h-4 w-4 sm:h-5 sm:w-5" />
                   Order History
                 </CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="px-3 sm:px-6">
                 {isLoading ? (
                   <div className="space-y-4">
                     {[1, 2, 3].map((i) => (
@@ -275,7 +369,7 @@ const Profile = () => {
                       >
                         {/* Order Header */}
                         <div
-                          className="p-4 bg-muted/50 cursor-pointer"
+                          className="p-3 sm:p-4 bg-muted/50 cursor-pointer"
                           onClick={() =>
                             setExpandedOrderId(
                               expandedOrderId === order.orderId
@@ -284,40 +378,44 @@ const Profile = () => {
                             )
                           }
                         >
-                          <div className="flex items-start justify-between">
-                            <div className="space-y-1">
-                              <div className="flex items-center gap-2">
-                                <span className="font-semibold">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="space-y-1 min-w-0 flex-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="font-semibold text-sm sm:text-base">
                                   Order #{order.orderId}
                                 </span>
-                                <Badge variant={getStatusVariant(order.status)}>
+                                <Badge
+                                  variant={getStatusVariant(order.status)}
+                                  className="text-xs"
+                                >
                                   <span className="flex items-center gap-1">
                                     {getStatusIcon(order.status)}
-                                    {order.status}
+                                    <span className="hidden sm:inline">
+                                      {order.status}
+                                    </span>
                                   </span>
                                 </Badge>
                               </div>
-                              <p className="text-sm text-muted-foreground">
-                                Placed on{" "}
+                              <p className="text-xs sm:text-sm text-muted-foreground">
                                 {new Date(order.orderDate).toLocaleDateString(
                                   "en-US",
                                   {
-                                    year: "numeric",
-                                    month: "long",
+                                    month: "short",
                                     day: "numeric",
+                                    year: "numeric",
                                   }
                                 )}
                               </p>
-                              <p className="text-sm text-muted-foreground">
+                              <p className="text-xs sm:text-sm text-muted-foreground">
                                 {order.orderItems?.length || 0} item(s)
                               </p>
                             </div>
-                            <div className="text-right">
-                              <p className="text-lg font-bold">
+                            <div className="text-right flex-shrink-0">
+                              <p className="text-base sm:text-lg font-bold">
                                 Rs {order.totalPrice.toFixed(2)}
                               </p>
                               <ChevronRight
-                                className={`h-5 w-5 text-muted-foreground transition-transform ${
+                                className={`h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground transition-transform ${
                                   expandedOrderId === order.orderId
                                     ? "rotate-90"
                                     : ""
@@ -329,38 +427,61 @@ const Profile = () => {
 
                         {/* Order Details (Expandable) */}
                         {expandedOrderId === order.orderId && (
-                          <div className="p-4 space-y-4">
+                          <div className="p-3 sm:p-4 space-y-3 sm:space-y-4">
                             {/* Order Items */}
                             <div>
-                              <h4 className="font-semibold mb-3">
+                              <h4 className="font-semibold mb-2 sm:mb-3 text-sm sm:text-base">
                                 Order Items
                               </h4>
                               <div className="space-y-2">
                                 {order.orderItems?.map((item) => (
                                   <div
                                     key={item.itemId}
-                                    className="flex justify-between items-center p-3 bg-muted/30 rounded"
+                                    className="bg-muted/30 rounded p-3 space-y-2"
                                   >
-                                    <div className="flex-1">
-                                      <p className="font-medium">
-                                        {item.productName}
+                                    <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2">
+                                      <div className="flex-1 min-w-0">
+                                        <p className="font-medium text-sm sm:text-base truncate">
+                                          {item.productName}
+                                        </p>
+                                        <p className="text-xs sm:text-sm text-muted-foreground">
+                                          Quantity: {item.quantity} × Rs
+                                          {item.price.toFixed(2)}
+                                        </p>
+                                        {item.personalizationDetails &&
+                                          Object.keys(
+                                            item.personalizationDetails
+                                          ).length > 0 && (
+                                            <Badge
+                                              variant="outline"
+                                              className="mt-1 text-xs"
+                                            >
+                                              Personalized
+                                            </Badge>
+                                          )}
+                                      </div>
+                                      <p className="font-semibold text-sm sm:text-base self-end sm:self-center">
+                                        Rs {item.itemTotal.toFixed(2)}
                                       </p>
-                                      <p className="text-sm text-muted-foreground">
-                                        Quantity: {item.quantity} × Rs
-                                        {item.price.toFixed(2)}
-                                      </p>
-                                      {item.personalizationDetails && (
-                                        <Badge
-                                          variant="outline"
-                                          className="mt-1"
-                                        >
-                                          Personalized
-                                        </Badge>
-                                      )}
                                     </div>
-                                    <p className="font-semibold">
-                                      Rs {item.itemTotal.toFixed(2)}
-                                    </p>
+
+                                    {/* Personalization Details */}
+                                    {item.personalizationDetails &&
+                                      Object.keys(item.personalizationDetails)
+                                        .length > 0 && (
+                                        <div className="bg-background/50 rounded-md p-2 space-y-1">
+                                          <div className="text-xs font-medium text-muted-foreground">
+                                            Personalization Details:
+                                          </div>
+                                          <div className="text-xs space-y-1">
+                                            {getPersonalizationDetails(
+                                              item.personalizationDetails
+                                            ).map((detail, index) => (
+                                              <div key={index}>{detail}</div>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      )}
                                   </div>
                                 ))}
                               </div>
@@ -369,20 +490,20 @@ const Profile = () => {
                             <Separator />
 
                             {/* Delivery Information */}
-                            <div className="grid md:grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                               <div>
-                                <h4 className="font-semibold mb-2">
+                                <h4 className="font-semibold mb-1 sm:mb-2 text-sm sm:text-base">
                                   Delivery Address
                                 </h4>
-                                <p className="text-sm text-muted-foreground">
+                                <p className="text-xs sm:text-sm text-muted-foreground break-words">
                                   {order.deliveryAddress}
                                 </p>
                               </div>
                               <div>
-                                <h4 className="font-semibold mb-2">
+                                <h4 className="font-semibold mb-1 sm:mb-2 text-sm sm:text-base">
                                   Contact Number
                                 </h4>
-                                <p className="text-sm text-muted-foreground">
+                                <p className="text-xs sm:text-sm text-muted-foreground">
                                   {order.contactNumber}
                                 </p>
                               </div>
@@ -392,10 +513,10 @@ const Profile = () => {
 
                             {/* Order Total */}
                             <div className="flex justify-between items-center pt-2">
-                              <span className="font-semibold">
+                              <span className="font-semibold text-sm sm:text-base">
                                 Total Amount
                               </span>
-                              <span className="text-xl font-bold">
+                              <span className="text-lg sm:text-xl font-bold">
                                 Rs {order.totalPrice.toFixed(2)}
                               </span>
                             </div>

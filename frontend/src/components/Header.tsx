@@ -1,4 +1,4 @@
-import { ShoppingCart, User, Heart, Search, Menu } from "lucide-react";
+import { ShoppingCart, User, Heart, Search, Menu, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useStore } from "@/hooks/useStore";
@@ -9,6 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useState } from "react";
 
 interface HeaderProps {
   onCartClick: () => void;
@@ -18,6 +19,7 @@ interface HeaderProps {
 export function Header({ onCartClick, onSearchClick }: HeaderProps) {
   const { cart, currentUser, setCurrentUser, userInfo, logout } = useStore();
   const cartItemsCount = cart.reduce((total, item) => total + item.quantity, 0);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -29,7 +31,7 @@ export function Header({ onCartClick, onSearchClick }: HeaderProps) {
               🧸
             </span>
           </div>
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-teddy-700 to-pink-600 bg-clip-text text-transparent">
+          <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-teddy-700 to-pink-600 bg-clip-text text-transparent">
             Pinky Promise
           </h1>
         </div>
@@ -63,12 +65,17 @@ export function Header({ onCartClick, onSearchClick }: HeaderProps) {
         </nav>
 
         {/* Actions */}
-        <div className="flex items-center space-x-2">
-          <Button variant="ghost" size="icon" onClick={onSearchClick}>
+        <div className="flex items-center space-x-1 sm:space-x-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onSearchClick}
+            className="hidden sm:flex"
+          >
             <Search className="h-4 w-4" />
           </Button>
 
-          <Button variant="ghost" size="icon">
+          <Button variant="ghost" size="icon" className="hidden sm:flex">
             <Heart className="h-4 w-4" />
           </Button>
 
@@ -149,11 +156,56 @@ export function Header({ onCartClick, onSearchClick }: HeaderProps) {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <Button variant="ghost" size="icon" className="md:hidden">
-            <Menu className="h-4 w-4" />
+          <Button
+            variant="ghost"
+            size="icon"
+            className="md:hidden"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          >
+            {isMobileMenuOpen ? (
+              <X className="h-4 w-4" />
+            ) : (
+              <Menu className="h-4 w-4" />
+            )}
           </Button>
         </div>
       </div>
+
+      {/* Mobile Navigation Menu */}
+      {isMobileMenuOpen && (
+        <div className="md:hidden border-t bg-background">
+          <nav className="container max-w-screen-2xl py-4 flex flex-col space-y-3">
+            <Link
+              to="/"
+              className="px-4 py-2 text-sm font-medium transition-colors hover:text-primary hover:bg-accent rounded-md"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              Home
+            </Link>
+            <Link
+              to="/products"
+              className="px-4 py-2 text-sm font-medium transition-colors hover:text-primary hover:bg-accent rounded-md"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              Products
+            </Link>
+            <a
+              href="#categories"
+              className="px-4 py-2 text-sm font-medium transition-colors hover:text-primary hover:bg-accent rounded-md"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              Categories
+            </a>
+            <a
+              href="#about"
+              className="px-4 py-2 text-sm font-medium transition-colors hover:text-primary hover:bg-accent rounded-md"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              About
+            </a>
+          </nav>
+        </div>
+      )}
     </header>
   );
 }

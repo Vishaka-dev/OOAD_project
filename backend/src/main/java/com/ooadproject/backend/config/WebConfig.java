@@ -17,8 +17,10 @@ public class WebConfig implements WebMvcConfigurer {
     @Override
     public void addResourceHandlers(@NonNull ResourceHandlerRegistry registry) {
         // Serve uploaded images from the uploads directory
+        // Use absolute path for Railway deployment
+        String uploadPath = System.getProperty("user.dir") + "/uploads/";
         registry.addResourceHandler("/uploads/**")
-                .addResourceLocations("file:backend/uploads/");
+                .addResourceLocations("file:" + uploadPath);
     }
 
     @Bean
@@ -27,7 +29,8 @@ public class WebConfig implements WebMvcConfigurer {
 
         // Add your frontend URL(s) explicitly
         config.setAllowedOriginPatterns(
-                List.of("http://localhost:5173", "http://localhost:5178", "http://localhost:5179",
+                List.of("https://dynamic-gecko-68f64b.netlify.app", "http://localhost:5173", "http://localhost:5178",
+                        "http://localhost:5179",
                         "http://localhost:5180", "http://localhost:3000"));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
