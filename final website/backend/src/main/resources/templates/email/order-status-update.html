@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Status Update - SOLEKTA</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            text-align: center;
+            border-bottom: 3px solid #007bff;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            color: #007bff;
+            margin: 0;
+            font-size: 28px;
+        }
+        .status-update {
+            background-color: #e8f5e8;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 5px solid #28a745;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 8px 20px;
+            border-radius: 25px;
+            font-weight: bold;
+            font-size: 14px;
+            text-transform: uppercase;
+            margin: 5px 0;
+        }
+        .status-pending {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        .status-confirmed {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .status-processing {
+            background-color: #cce7ff;
+            color: #004085;
+        }
+        .status-shipped {
+            background-color: #e2e3e5;
+            color: #383d41;
+        }
+        .status-delivered {
+            background-color: #d1ecf1;
+            color: #0c5460;
+        }
+        .order-info {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>SOLEKTA Store</h1>
+            <p>Order Status Update</p>
+        </div>
+
+        <!-- Greeting -->
+        <div>
+            <p>Dear <strong th:text="${customerName}">Customer</strong>,</p>
+            <p>We have an update on your order status!</p>
+        </div>
+
+        <!-- Status Update -->
+        <div class="status-update">
+            <h2 style="color: #28a745; margin-top: 0;">Order Status Updated</h2>
+            <p><strong>Order Number:</strong> <span th:text="${orderNumber}">ORD-1234567890</span></p>
+            <p><strong>Updated on:</strong> <span th:text="${updateDate}">October 3, 2023 at 2:30 PM</span></p>
+            <p><strong>Status changed from:</strong> 
+                <span class="status-badge status-pending" th:text="${oldStatus}">PENDING</span>
+                <strong> to </strong>
+                <span class="status-badge status-confirmed" th:text="${newStatus}">CONFIRMED</span>
+            </p>
+        </div>
+
+        <!-- Order Information -->
+        <div class="order-info">
+            <h2 style="color: #007bff; margin-top: 0;">Order Summary</h2>
+            <p><strong>Order Number:</strong> <span th:text="${orderNumber}">ORD-1234567890</span></p>
+            <p><strong>Order Date:</strong> <span th:text="${order.createdAt}">October 2, 2023</span></p>
+            <p><strong>Total Amount:</strong> <span th:text="${'$' + #numbers.formatDecimal(order.totalAmount, 1, 2)}">$1,599.98</span></p>
+        </div>
+
+        <!-- Status-specific information -->
+        <div th:if="${newStatus == 'CONFIRMED'}">
+            <h3 style="color: #28a745;">✅ Order Confirmed!</h3>
+            <p>Great news! Your order has been confirmed and is now being prepared for shipment. We'll keep you updated as it progresses through our fulfillment process.</p>
+        </div>
+
+        <div th:if="${newStatus == 'PROCESSING'}">
+            <h3 style="color: #007bff;">⚙️ Order Processing</h3>
+            <p>Your order is now being processed. Our team is carefully packaging your items and preparing them for shipment.</p>
+        </div>
+
+        <div th:if="${newStatus == 'SHIPPED'}">
+            <h3 style="color: #6c757d;">🚚 Order Shipped!</h3>
+            <p>Excellent! Your order has been shipped and is on its way to you. You should receive your items within 3-5 business days.</p>
+            <p><strong>Note:</strong> If a tracking number is available, it will be provided in a separate email.</p>
+        </div>
+
+        <div th:if="${newStatus == 'DELIVERED'}">
+            <h3 style="color: #28a745;">🎉 Order Delivered!</h3>
+            <p>Fantastic! Your order has been successfully delivered. We hope you love your new items!</p>
+            <p>If you have any questions about your purchase or need assistance, please don't hesitate to contact us.</p>
+        </div>
+
+        <div th:if="${newStatus == 'CANCELLED'}">
+            <h3 style="color: #dc3545;">❌ Order Cancelled</h3>
+            <p>Your order has been cancelled. If you have any questions about this cancellation, please contact our customer service team.</p>
+        </div>
+
+        <!-- Next Steps -->
+        <div th:if="${newStatus != 'DELIVERED' && newStatus != 'CANCELLED'}">
+            <h3>What's Next?</h3>
+            <ul>
+                <li th:if="${newStatus == 'PENDING' || newStatus == 'CONFIRMED'}">We'll continue processing your order</li>
+                <li th:if="${newStatus == 'PROCESSING'}">Your items will be packaged and prepared for shipment</li>
+                <li th:if="${newStatus == 'SHIPPED'}">You can track your package using the provided tracking information</li>
+                <li>You'll receive another email update when the status changes</li>
+                <li>You can check your order status anytime by logging into your account</li>
+            </ul>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p><strong>Need Help?</strong></p>
+            <p>If you have any questions about your order, our customer service team is here to help!</p>
+            <p>Email: support@technova.com | Phone: 1-800-TECHNOVA</p>
+            <p style="font-size: 12px; color: #999;">
+                This is an automated message. Please do not reply to this email.
+            </p>
+        </div>
+    </div>
+</body>
+</html>
