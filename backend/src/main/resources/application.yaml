@@ -22,18 +22,14 @@ spring:
           auth: true
           starttls:
             enable: true
-            required: false
+            required: true
           ssl:
-            enable: ${MAIL_USE_SSL:false}
-            trust: "*"
-            protocols: TLSv1.2
-          socketFactory:
-            port: ${MAIL_PORT}
-            class: ${MAIL_SOCKET_FACTORY:javax.net.ssl.SSLSocketFactory}
-            fallback: false
-          connectiontimeout: 30000
-          timeout: 30000
-          writetimeout: 30000
+            enable: false
+            trust: smtp.gmail.com
+          connectiontimeout: 10000
+          timeout: 10000
+          writetimeout: 10000
+        debug: true
 
   servlet:
     multipart:
@@ -58,9 +54,14 @@ server:
 
 app:
   mail:
-    admin: ${MAIL_ADMIN}
-    from-name: ${MAIL_FROM_NAME}
-    enabled: ${MAIL_ENABLED}
+    admin: ${MAIL_ADMIN:admin@example.com}
+    from-name: ${MAIL_FROM_NAME:Gift Shop}
+    enabled: ${MAIL_ENABLED:false}
+  sendgrid:
+    api-key: ${SENDGRID_API_KEY:}
+    from-email: ${SENDGRID_FROM_EMAIL:}
+    from-name: ${SENDGRID_FROM_NAME:Pinky Promise Gift Shop}
+    enabled: ${SENDGRID_ENABLED:true}
 
 jwt:
   secret: ${JWT_SECRET}

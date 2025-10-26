@@ -34,13 +34,35 @@ public class EmailConfig {
         Properties props = mailSender.getJavaMailProperties();
         props.put("mail.transport.protocol", "smtp");
         props.put("mail.smtp.auth", "true");
-        props.put("mail.smtp.starttls.enable", "true");
-        props.put("mail.smtp.connectiontimeout", "5000");
-        props.put("mail.smtp.timeout", "3000");
-        props.put("mail.smtp.writetimeout", "5000");
-        props.put("mail.debug", "false");
+
+        // Configure based on port
+        if (mailPort == 465) {
+            // SSL configuration for port 465
+            props.put("mail.smtp.ssl.enable", "true");
+            props.put("mail.smtp.ssl.trust", mailHost);
+            props.put("mail.smtp.ssl.protocols", "TLSv1.2 TLSv1.3");
+            props.put("mail.smtp.starttls.enable", "false");
+        } else {
+            // TLS configuration for port 587 (works with SendGrid and most providers)
+            props.put("mail.smtp.starttls.enable", "true");
+            props.put("mail.smtp.starttls.required", "true");
+            props.put("mail.smtp.ssl.enable", "false");
+            props.put("mail.smtp.ssl.trust", mailHost);
+            props.put("mail.smtp.ssl.protocols", "TLSv1.2 TLSv1.3");
+        }
+
+        // Increased timeouts for cloud environments
+        props.put("mail.smtp.connectiontimeout", "20000");
+        props.put("mail.smtp.timeout", "20000");
+        props.put("mail.smtp.writetimeout", "20000");
+
+        // Enable debug for troubleshooting (disable in production)
+        props.put("mail.debug", "true");
+
+        // Additional properties for better compatibility
+        props.put("mail.smtp.socketFactory.fallback", "true");
+        props.put("mail.smtp.ssl.checkserveridentity", "false");
 
         return mailSender;
     }
 }
-

@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useStore } from "@/hooks/useStore";
 import { useNavigate } from "react-router-dom";
+import { calculateExtraCost } from "@/lib/personalization-utils";
 
 interface CartProps {
   isOpen: boolean;
@@ -18,10 +19,26 @@ export function Cart({ isOpen, onClose }: CartProps) {
 
   if (!isOpen) return null;
 
-  const total = getCartTotal();
-  const tax = total * 0.08; // 8% tax
-  const shipping = total > 50 ? 0 : 5.99;
-  const finalTotal = total + tax + shipping;
+  // Helper function to get current extra price
+  const getCurrentExtraPrice = (item: any) => {
+    if (
+      item.personalizationDetails &&
+      Object.keys(item.personalizationDetails).length > 0
+    ) {
+      return calculateExtraCost(item.personalizationDetails);
+    }
+    return 0;
+  };
+
+  // Calculate total with current personalization prices
+  const total = cart.reduce((sum, item) => {
+    const basePrice = item.price * item.quantity;
+    const extraPrice = getCurrentExtraPrice(item) * item.quantity;
+    return sum + basePrice + extraPrice;
+  }, 0);
+
+  const shipping = 0; // Free shipping
+  const finalTotal = total + shipping;
 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm">
@@ -148,17 +165,11 @@ export function Cart({ isOpen, onClose }: CartProps) {
                   <span>Rs {total.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span>Tax:</span>
-                  <span>Rs {tax.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between text-sm">
                   <span>Shipping:</span>
-                  <span>
-                    {shipping === 0 ? "Free" : `Rs ${shipping.toFixed(2)}`}
-                  </span>
+                  <span>Free</span>
                 </div>
                 <Separator />
-                <div className="flex justify-between font-semibold">
+                <div className="flex justify-between font-semibold text-lg">
                   <span>Total:</span>
                   <span>Rs {finalTotal.toFixed(2)}</span>
                 </div>

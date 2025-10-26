@@ -36,10 +36,10 @@ public class DataSeeder implements CommandLineRunner {
             createDefaultCategories();
         }
 
-        // Create default products if they don't exist
-        if (productRepository.count() == 0) {
-            createDefaultProducts();
-        }
+        // // Create default products if they don't exist
+        // if (productRepository.count() == 0) {
+        //     createDefaultProducts();
+        // }
 
         System.out.println("✅ Data seeding completed!");
     }
@@ -58,7 +58,7 @@ public class DataSeeder implements CommandLineRunner {
         // Customer user
         User customer = new User();
         customer.setUsername("hirusha");
-        customer.setEmail("hirusha@example.com");
+        customer.setEmail("hirusha12.silva@gmail.com");
         customer.setPasswordHash(passwordEncoder.encode("2004zipza"));
         customer.setRole(User.Role.customer);
         userRepository.save(customer);
@@ -69,50 +69,60 @@ public class DataSeeder implements CommandLineRunner {
     private void createDefaultCategories() {
         System.out.println("📂 Creating default categories...");
 
-        Category defaultCategory = new Category();
-        defaultCategory.setName("Teddy Bears");
-        defaultCategory.setDescription("Cute and cuddly teddy bears");
-        categoryRepository.save(defaultCategory);
+        Category defaultCategory1 = new Category();
+        defaultCategory1.setName("Teddy Bears");
+        defaultCategory1.setDescription("Cute and cuddly teddy bears");
+        categoryRepository.save(defaultCategory1);
+        
+        Category defaultCategory2 = new Category();
+        defaultCategory2.setName("Teddy With Flowers");
+        defaultCategory2.setDescription("Bouquet of Flowers with a Cute and cuddly teddy bear");
+        categoryRepository.save(defaultCategory2);
+
+        Category defaultCategory3 = new Category();
+        defaultCategory3.setName("Flowers");
+        defaultCategory3.setDescription("Bouquet of Flowers");
+        categoryRepository.save(defaultCategory3);
 
         System.out.println("✅ Default categories created");
     }
 
-    private void createDefaultProducts() {
-        System.out.println("🧸 Creating default products...");
+    // private void createDefaultProducts() {
+    //     System.out.println("🧸 Creating default products...");
 
-        Category defaultCategory = categoryRepository.findByNameIgnoreCase("Teddy Bears")
-                .orElse(categoryRepository.findAll().get(0));
+    //     Category defaultCategory = categoryRepository.findByNameIgnoreCase("Teddy Bears")
+    //             .orElse(categoryRepository.findAll().get(0));
 
-        // Product 1
-        Product product1 = new Product();
-        product1.setName("Classic Brown Teddy");
-        product1.setDescription("A timeless brown teddy bear perfect for cuddling");
-        product1.setPrice(new BigDecimal("29.99"));
-        product1.setImageUrl("/placeholder.svg");
-        product1.setStockQuantity(15);
-        product1.setCategory(defaultCategory);
-        productRepository.save(product1);
+    //     // Product 1
+    //     Product product1 = new Product();
+    //     product1.setName("Classic Brown Teddy");
+    //     product1.setDescription("A timeless brown teddy bear perfect for cuddling");
+    //     product1.setPrice(new BigDecimal("29.99"));
+    //     product1.setImageUrl("/placeholder.svg");
+    //     product1.setStockQuantity(15);
+    //     product1.setCategory(defaultCategory);
+    //     productRepository.save(product1);
 
-        // Product 2
-        Product product2 = new Product();
-        product2.setName("Pink Princess Bear");
-        product2.setDescription("Adorable pink teddy with a sparkly crown");
-        product2.setPrice(new BigDecimal("34.99"));
-        product2.setImageUrl("/placeholder.svg");
-        product2.setStockQuantity(8);
-        product2.setCategory(defaultCategory);
-        productRepository.save(product2);
+    //     // Product 2
+    //     Product product2 = new Product();
+    //     product2.setName("Pink Princess Bear");
+    //     product2.setDescription("Adorable pink teddy with a sparkly crown");
+    //     product2.setPrice(new BigDecimal("34.99"));
+    //     product2.setImageUrl("/placeholder.svg");
+    //     product2.setStockQuantity(8);
+    //     product2.setCategory(defaultCategory);
+    //     productRepository.save(product2);
 
-        // Product 3
-        Product product3 = new Product();
-        product3.setName("Tiny Pocket Bear");
-        product3.setDescription("Perfect small companion for on-the-go adventures");
-        product3.setPrice(new BigDecimal("12.99"));
-        product3.setImageUrl("/placeholder.svg");
-        product3.setStockQuantity(25);
-        product3.setCategory(defaultCategory);
-        productRepository.save(product3);
+    //     // Product 3
+    //     Product product3 = new Product();
+    //     product3.setName("Tiny Pocket Bear");
+    //     product3.setDescription("Perfect small companion for on-the-go adventures");
+    //     product3.setPrice(new BigDecimal("12.99"));
+    //     product3.setImageUrl("/placeholder.svg");
+    //     product3.setStockQuantity(25);
+    //     product3.setCategory(defaultCategory);
+    //     productRepository.save(product3);
 
-        System.out.println("✅ Default products created");
-    }
+    //     System.out.println("✅ Default products created");
+    // }
 }

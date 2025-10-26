@@ -14,7 +14,7 @@ export function PriceFilter({
   priceRange,
   onPriceRangeChange,
   min = 0,
-  max = 1000,
+  max = 10000,
 }: PriceFilterProps) {
   const [localRange, setLocalRange] = useState<[number, number]>(priceRange);
 
@@ -52,7 +52,7 @@ export function PriceFilter({
           onValueChange={handleSliderChange}
           min={min}
           max={max}
-          step={1}
+          step={100}
           className="w-full"
         />
 

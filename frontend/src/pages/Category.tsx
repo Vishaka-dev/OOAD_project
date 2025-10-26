@@ -22,7 +22,7 @@ const Category = () => {
   const [searchQuery, setSearchQuery] = useState(
     searchParams.get("search") || ""
   );
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000]);
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 10000]);
   const [inStockOnly, setInStockOnly] = useState(false);
   const [sortBy, setSortBy] = useState<"name" | "price" | "newest">("name");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");

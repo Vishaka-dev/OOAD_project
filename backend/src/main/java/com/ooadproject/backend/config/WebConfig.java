@@ -29,7 +29,7 @@ public class WebConfig implements WebMvcConfigurer {
 
         // Add your frontend URL(s) explicitly
         config.setAllowedOriginPatterns(
-                List.of("https://dynamic-gecko-68f64b.netlify.app", "http://localhost:5173", "http://localhost:5178",
+                List.of("https://pinky-promisse.netlify.app", "http://localhost:5173", "http://localhost:5178",
                         "http://localhost:5179",
                         "http://localhost:5180", "http://localhost:3000"));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));

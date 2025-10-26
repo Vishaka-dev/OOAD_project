@@ -95,16 +95,16 @@ export function calculateExtraCost(details: PersonalizationDetails): number {
   if (details.occasion) {
     switch (details.occasion) {
       case "Graduation":
-        extraCost += 5;
+        extraCost += 500;
         break;
       case "Birthday":
-        extraCost += 3;
+        extraCost += 300;
         break;
       case "Valentine":
-        extraCost += 8;
+        extraCost += 300;
         break;
       case "Mini":
-        extraCost += 2;
+        extraCost += 200;
         break;
     }
   }
@@ -116,10 +116,10 @@ export function calculateExtraCost(details: PersonalizationDetails): number {
     if (details.teddy.type) {
       switch (details.teddy.type) {
         case "handmade":
-          extraCost += 5;
+          extraCost += 500;
           break;
         case "fluffy":
-          extraCost += 10;
+          extraCost += 1000;
           break;
       }
     }
@@ -134,22 +134,22 @@ export function calculateExtraCost(details: PersonalizationDetails): number {
   if (details.wrapping_paper) {
     switch (details.wrapping_paper) {
       case "Premium":
-        extraCost += 3;
+        extraCost += 300;
         break;
       case "Gift Box":
-        extraCost += 5;
+        extraCost += 500;
         break;
     }
   }
 
   // Soft toys pricing
   if (details.soft_toys === "Yes") {
-    extraCost += 8;
+    extraCost += 400;
   }
 
   // Custom felt design pricing
   if (details.felt_design && details.felt_design.trim()) {
-    extraCost += 5;
+    extraCost += 300;
   }
 
   return extraCost;

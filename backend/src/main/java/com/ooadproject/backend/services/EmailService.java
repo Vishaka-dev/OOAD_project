@@ -21,49 +21,83 @@ import java.time.format.DateTimeFormatter;
 public class EmailService {
 
     private final JavaMailSender mailSender;
+    private final SendGridEmailService sendGridEmailService;
 
     @Value("${spring.mail.username}")
     private String fromEmail;
 
-    @Value("${app.mail.admin:admin@example.com}")
+    @Value("${app.mail.admin}")
     private String adminEmail;
 
-    @Value("${app.mail.from-name:Gift Shop Team}")
+    @Value("${app.mail.from-name}")
     private String fromName;
 
     @Value("${app.mail.enabled:true}")
     private boolean emailEnabled;
 
+    @Value("${app.sendgrid.enabled:true}")
+    private boolean sendGridEnabled;
+
     public void sendOrderConfirmation(Order order) {
+        // Try SendGrid first (works on Railway)
+        if (sendGridEnabled) {
+            log.info("Using SendGrid for order confirmation email");
+            sendGridEmailService.sendOrderConfirmation(order);
+            return;
+        }
+
+        // Fallback to SMTP
         if (!emailEnabled) {
             log.info("Email service is disabled. Skipping order confirmation email for order: {}", order.getOrderId());
             return;
         }
 
         try {
+            log.info("Attempting to send order confirmation email for order: {} to: {}",
+                    order.getOrderId(), order.getUser().getEmail());
+            log.info("Email configuration - From: {}, Host: {}, Port: {}",
+                    fromEmail, "smtp.gmail.com", "587");
+
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
             try {
                 helper.setFrom(fromEmail, fromName);
+                log.info("Set from address: {} with name: {}", fromEmail, fromName);
             } catch (UnsupportedEncodingException e) {
                 helper.setFrom(fromEmail);
+                log.warn("Failed to set from name, using email only: {}", fromEmail);
             }
             helper.setTo(order.getUser().getEmail());
             helper.setSubject("🎉 Order Confirmation - Order #" + order.getOrderId());
             helper.setText(buildOrderConfirmationHtml(order), true);
 
+            log.info("Sending email via mailSender...");
             mailSender.send(message);
-            log.info("Order confirmation email sent for order: {}", order.getOrderId());
+            log.info("✅ Order confirmation email sent successfully for order: {}", order.getOrderId());
 
             // Also send notification to admin
             sendAdminOrderNotification(order);
         } catch (MessagingException e) {
-            log.error("Failed to send order confirmation email for order: {}", order.getOrderId(), e);
+            log.error("❌ Failed to send order confirmation email for order: {}", order.getOrderId());
+            log.error("Error details: {}", e.getMessage());
+            log.error("Full stack trace:", e);
+        } catch (Exception e) {
+            log.error("❌ Unexpected error sending email for order: {}", order.getOrderId());
+            log.error("Error details: {}", e.getMessage());
+            log.error("Full stack trace:", e);
         }
     }
 
     public void sendOrderStatusUpdate(Order order) {
+        // Try SendGrid first (works on Railway)
+        if (sendGridEnabled) {
+            log.info("Using SendGrid for order status update email");
+            sendGridEmailService.sendOrderStatusUpdate(order);
+            return;
+        }
+
+        // Fallback to SMTP
         if (!emailEnabled) {
             log.info("Email service is disabled. Skipping order status update email for order: {}", order.getOrderId());
             return;
@@ -95,6 +129,9 @@ public class EmailService {
         }
 
         try {
+            log.info("Attempting to send admin notification email for order: {} to: {}",
+                    order.getOrderId(), adminEmail);
+
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
@@ -108,9 +145,15 @@ public class EmailService {
             helper.setText(buildAdminNotificationHtml(order), true);
 
             mailSender.send(message);
-            log.info("Admin notification email sent for order: {}", order.getOrderId());
+            log.info("✅ Admin notification email sent successfully for order: {}", order.getOrderId());
         } catch (MessagingException e) {
-            log.error("Failed to send admin notification email for order: {}", order.getOrderId(), e);
+            log.error("❌ Failed to send admin notification email for order: {}", order.getOrderId());
+            log.error("Error details: {}", e.getMessage());
+            log.error("Full stack trace:", e);
+        } catch (Exception e) {
+            log.error("❌ Unexpected error sending admin email for order: {}", order.getOrderId());
+            log.error("Error details: {}", e.getMessage());
+            log.error("Full stack trace:", e);
         }
     }
 
@@ -168,6 +211,14 @@ public class EmailService {
     }
 
     public void sendOrderSummary(Order order) {
+        // Try SendGrid first (works on Railway)
+        if (sendGridEnabled) {
+            log.info("Using SendGrid for admin order notification");
+            sendGridEmailService.sendAdminOrderNotification(order);
+            return;
+        }
+
+        // Fallback to SMTP
         if (!emailEnabled) {
             log.info("Email service is disabled. Skipping order summary email for order: {}", order.getOrderId());
             return;
