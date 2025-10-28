@@ -46,7 +46,7 @@ public class InventoryService {
 
     @Transactional
     public InventoryDTO updateStock(StockUpdateRequest request) {
-        // Get or create inventory record
+        // Get or create inventory
         Inventory inventory = inventoryRepository.findByProductProductId(request.getProductId())
                 .orElseGet(() -> {
                     Product product = productRepository.findById(request.getProductId())

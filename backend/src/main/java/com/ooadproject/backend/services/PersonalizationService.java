@@ -91,8 +91,7 @@ public class PersonalizationService {
         productRepository.findById(request.getProductId())
                 .orElseThrow(() -> new RuntimeException("Product not found"));
 
-        // Build personalization details map for the cart item (do not persist a new
-        // option row)
+        // Build personalization details
         java.util.Map<String, Object> details = new java.util.HashMap<>();
         if (request.getAdditionalDetails() != null) {
             details.putAll(request.getAdditionalDetails());
@@ -125,7 +124,6 @@ public class PersonalizationService {
 
         // Add any additional details to the personalization
         if (request.getAdditionalDetails() != null) {
-            // Merge additional details into the personalization map
             Map<String, Object> personalizationMap = personalizationDTO.toMap();
             personalizationMap.putAll(request.getAdditionalDetails());
             personalizationDTO = PersonalizationDTO.fromMap(personalizationMap);

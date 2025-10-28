@@ -77,8 +77,7 @@ public class AdminDashboardService {
                 // Customer statistics
                 stats.setTotalCustomers(userRepository.count());
 
-                // Product statistics (derive from products to avoid empty inventory sync
-                // issues)
+                // Product statistics
                 long totalProducts = productRepository.count();
                 long lowStockFromProducts = productRepository.findLowStockProducts(5).size();
                 long outOfStockFromProducts = productRepository.findAll().stream()

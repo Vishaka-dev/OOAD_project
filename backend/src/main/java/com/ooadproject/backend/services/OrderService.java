@@ -81,7 +81,7 @@ public class OrderService {
             order.setStatus(Order.OrderStatus.Confirmed);
             orderRepository.save(order);
 
-            // Send confirmation email (non-blocking - don't fail checkout if email fails)
+            // Send confirmation email
             try {
                 System.out.println("📧 Attempting to send order confirmation email...");
                 emailService.sendOrderConfirmation(order);
@@ -89,24 +89,19 @@ public class OrderService {
             } catch (Exception e) {
                 System.err.println("⚠️ Failed to send order confirmation email: " + e.getMessage());
                 System.err.println("⚠️ Order was still created successfully - email failure is non-critical");
-                // Log but don't throw - email failure should not prevent checkout
             }
 
-            // Send comprehensive order summary to both customer and admin (non-blocking)
+            // Send comprehensive order summary to both customer and admin
             try {
                 System.out.println("📧 Attempting to send order summary email...");
                 emailService.sendOrderSummary(order);
                 System.out.println("✅ Order summary email sent successfully");
             } catch (Exception e) {
                 System.err.println("⚠️ Failed to send order summary email: " + e.getMessage());
-                // Log but don't throw - email failure should not prevent checkout
             }
         }
 
-        // Always clear the user's cart after an order is created to avoid stale cart
-        // items
-        // This prevents duplicate items lingering across checkouts regardless of
-        // payment method/status
+        // Always clear after Orded
         cartService.clearCart(user);
 
         return order;

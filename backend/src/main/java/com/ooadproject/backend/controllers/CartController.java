@@ -93,9 +93,6 @@ public class CartController {
                         .orElseThrow(() -> new RuntimeException("User not found"));
                 System.out.println("📥 User found: " + user.getUsername() + " (ID: " + user.getUserId() + ")");
             }
-            // For now, allow unauthenticated users to add to cart
-            // In a real app, you might want to use session-based cart or require
-            // authentication
 
             CartItem savedItem = cartService.addToCart(user, productId, quantity, personalizationDTO);
             System.out.println("✅ CartController - CartItem saved with ID: "

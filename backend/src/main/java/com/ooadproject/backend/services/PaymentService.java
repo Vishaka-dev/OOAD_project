@@ -41,7 +41,6 @@ public class PaymentService {
         return paymentRepository.save(payment);
     }
 
-    // ADD THIS METHOD to match your CheckoutService call
     @Transactional
     public Payment createPayment(Order order, Payment.PaymentMethod method, BigDecimal amount) {
         Payment payment = new Payment();

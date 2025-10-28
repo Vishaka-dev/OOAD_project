@@ -28,7 +28,7 @@ public class CheckoutService {
     private final ProductService productService;
     private final JavaMailSender mailSender;
 
-    @Value("${app.mail.admin:admin@example.com}")
+    @Value("${app.mail.admin}")
     private String adminEmail;
 
     @Transactional

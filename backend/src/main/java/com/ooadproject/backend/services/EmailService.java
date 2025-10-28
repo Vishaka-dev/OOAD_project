@@ -39,14 +39,13 @@ public class EmailService {
     private boolean sendGridEnabled;
 
     public void sendOrderConfirmation(Order order) {
-        // Try SendGrid first (works on Railway)
         if (sendGridEnabled) {
             log.info("Using SendGrid for order confirmation email");
             sendGridEmailService.sendOrderConfirmation(order);
             return;
         }
 
-        // Fallback to SMTP
+
         if (!emailEnabled) {
             log.info("Email service is disabled. Skipping order confirmation email for order: {}", order.getOrderId());
             return;

@@ -21,23 +21,18 @@ import java.util.UUID;
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
 public class FileUploadController {
-
-    // Directory where uploaded images will be stored
-    // Use absolute path that works in both local and Railway environments
     private static final String UPLOAD_DIR = System.getProperty("user.dir") + "/uploads/products/";
 
     @PostMapping("/product-image")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> uploadProductImage(@RequestParam("file") MultipartFile file) {
         try {
-            // Validate file
             if (file.isEmpty()) {
                 return ResponseEntity.badRequest().body(Map.of(
                         "success", false,
                         "message", "Please select a file to upload"));
             }
 
-            // Validate file type (only images)
             String contentType = file.getContentType();
             if (contentType == null || !contentType.startsWith("image/")) {
                 return ResponseEntity.badRequest().body(Map.of(
@@ -45,13 +40,11 @@ public class FileUploadController {
                         "message", "Only image files are allowed"));
             }
 
-            // Create upload directory if it doesn't exist
             File uploadDir = new File(UPLOAD_DIR);
             if (!uploadDir.exists()) {
                 uploadDir.mkdirs();
             }
 
-            // Generate unique filename
             String originalFilename = file.getOriginalFilename();
             String fileExtension = "";
             if (originalFilename != null && originalFilename.contains(".")) {
@@ -63,7 +56,6 @@ public class FileUploadController {
             Path filePath = Paths.get(UPLOAD_DIR + uniqueFilename);
             Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
 
-            // Return the URL to access the uploaded file
             String imageUrl = "/uploads/products/" + uniqueFilename;
 
             Map<String, Object> response = new HashMap<>();
